@@ -1,0 +1,10 @@
+[Unit]
+Description=CW Station live chat socket
+
+[Socket]
+ListenStream=/run/cw-chat.sock
+SocketMode=0660
+SocketGroup=www-data
+
+[Install]
+WantedBy=sockets.target
