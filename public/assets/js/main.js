@@ -88,6 +88,17 @@ function startPresence(onPing) {
 
 /* ---------- Main app ---------- */
 
+/** On phones the logbook takes the place of the rig; the Log button swaps them. */
+function setMoreOpen(open) {
+  document.querySelector('.settings').classList.toggle('more-open', open);
+  $('moreToggle').setAttribute('aria-expanded', String(open));
+}
+
+function setLogOpen(open) {
+  document.body.classList.toggle('log-open', open);
+  $('logToggle').setAttribute('aria-pressed', String(open));
+}
+
 const SAVED_SETTINGS = ['mode', 'speed', 'pitch', 'vol', 'latency', 'vfo', 'rf', 'bw'];
 const SETTINGS_KEY = 'cw-settings-v1';
 
@@ -158,6 +169,8 @@ async function startApp(callsign) {
   for (const id of SAVED_SETTINGS) $(id).addEventListener('change', saveSettings);
 
   let currentRoom = null;
+  $('moreToggle').onclick = () => setMoreOpen(!document.querySelector('.settings').classList.contains('more-open'));
+  $('logToggle').onclick = () => setLogOpen(!document.body.classList.contains('log-open'));
 
   function switchRoom(name) {
     if (name === currentRoom) return;
@@ -168,6 +181,8 @@ async function startApp(callsign) {
 
     currentRoom = name;
     keyer.clearMonitor();
+    setLogOpen(false);
+    setMoreOpen(false);
 
     for (const button of document.querySelectorAll('#rooms button')) {
       button.setAttribute('aria-pressed', button.dataset.room === name);

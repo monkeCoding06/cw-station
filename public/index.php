@@ -46,14 +46,15 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
   </nav>
   <div class="who">
     <strong><?= $h($user) ?></strong>
-    <button id="listen" aria-pressed="false" title="Show others that you are only listening">Just receiving</button>
+    <button id="listen" aria-pressed="false" title="Show others that you are only listening"><span class="long">Just receiving</span><span class="short">Listen</span></button>
 <?php if ($account === null): ?>
     <button id="claim">Claim</button>
 <?php endif; ?>
-    <button id="rigEdit" type="button" aria-expanded="false">Customize rig</button>
+    <button id="rigEdit" type="button" aria-expanded="false"><span class="long">Customize rig</span><span class="short">Rig</span></button>
     <button id="qslOpen" type="button">QSL <b id="qslBadge" hidden></b></button>
-    <a class="report" href="https://github.com/monkeCoding06/cw-station/issues" target="_blank" rel="noopener noreferrer">Report bug</a>
-    <button id="logout">Sign out</button>
+    <button id="logToggle" type="button" aria-pressed="false">Log</button>
+    <a class="report" href="https://github.com/monkeCoding06/cw-station/issues" target="_blank" rel="noopener noreferrer"><span class="long">Report bug</span><span class="short">Bug</span></a>
+    <button id="logout"><span class="long">Sign out</span><span class="short">Exit</span></button>
   </div>
 </header>
 
@@ -229,17 +230,20 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
         <label data-rooms="general echo practice"><span class="legend">Speed <output id="speedOut"></output></span>
           <input type="range" id="speed" min="5" max="40" value="16">
         </label>
-        <label><span class="legend">Sidetone <output id="pitchOut"></output></span>
-          <input type="range" id="pitch" min="350" max="950" step="10" value="600">
-        </label>
-        <div class="keymap">
-          <span class="legend">Keys</span>
-          <span>Dit <button id="ditKey" type="button" title="Click, then press a key"></button></span>
-          <span>Dah <button id="dahKey" type="button" title="Click, then press a key"></button></span>
+        <button id="moreToggle" class="more-btn" type="button" aria-expanded="false">More</button>
+        <div class="more">
+          <label><span class="legend">Sidetone <output id="pitchOut"></output></span>
+            <input type="range" id="pitch" min="350" max="950" step="10" value="600">
+          </label>
+          <div class="keymap">
+            <span class="legend">Keys</span>
+            <span>Dit <button id="ditKey" type="button" title="Click, then press a key"></button></span>
+            <span>Dah <button id="dahKey" type="button" title="Click, then press a key"></button></span>
+          </div>
+          <label data-rooms="general echo"><span class="legend">Latency <output id="latencyOut"></output></span>
+            <input type="range" id="latency" min="0" max="3000" step="50" value="0">
+          </label>
         </div>
-        <label data-rooms="general echo"><span class="legend">Latency <output id="latencyOut"></output></span>
-          <input type="range" id="latency" min="0" max="3000" step="50" value="0">
-        </label>
       </div>
     </section>
   </div>

@@ -857,21 +857,168 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .meter { width: 5.4rem; height: 3rem; }
 }
 
-/* Landscape phones: rig and keyer sit side by side so the pad stays reachable */
+.short, #logToggle, .more-btn { display: none; }
+.more { display: contents; }
+
+/* ---------- Phones: everything fits one viewport, no page scroll ---------- */
+
+@media (max-width: 600px), (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
+  body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .long { display: none; }
+  .short, #logToggle { display: inline; }
+  .more-btn { display: block; align-self: end; min-height: 2.1rem; padding: .1rem .4rem; background: #0e0e0d; border: 1px solid #444; border-radius: 3px; }
+  .settings { position: relative; }
+  .more { display: none; }
+  .settings.more-open .more {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .7rem;
+    position: absolute; left: 0; right: 0; bottom: calc(100% + .4rem); z-index: 20; padding: .6rem;
+    background: #171716; border: 1px solid var(--panel-edge); border-radius: 6px; box-shadow: 0 .4rem 1rem rgba(0, 0, 0, .6);
+  }
+
+  .top { flex: none; flex-wrap: wrap; gap: .25rem .5rem; padding: .25rem .5rem; }
+  .top nav { flex: 1 1 14rem; }
+  .top nav button { flex: 1; min-height: 2.1rem; padding: .1rem 0; font-size: .85rem; }
+  .who { flex: 1 1 auto; flex-wrap: nowrap; justify-content: space-between; gap: .25rem; }
+  .who button, .who .report { min-height: 2.1rem; padding: .2rem .5rem; font-size: .78rem; display: inline-flex; align-items: center; }
+  .who strong { font-size: .85rem; }
+  .claim { flex: none; padding: .3rem .5rem; }
+
+  .station {
+    flex: 1; min-height: 0; width: 100%; margin: 0; padding: .4rem .5rem; gap: .4rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    justify-content: stretch; align-items: stretch;
+  }
+  .bench, .logbook { grid-column: 1 / -1; grid-row: 1; min-height: 0; }
+  #onlinePanel { grid-column: 1 / -1; grid-row: 2; }
+  .side details { grid-column: 1; grid-row: 3; }
+  .foot { grid-column: 2; grid-row: 3; padding: 0; text-align: right; align-self: center; font-size: .56rem; line-height: 1.25; }
+  .bench, .side details, .foot, #onlinePanel { order: 0; }
+
+  .logbook { display: none; overflow: auto; }
+  body.log-open .logbook { display: grid; }
+  body.log-open .bench { display: none; }
+  .logbook textarea { height: 5.5rem; }
+  .page { padding: .6rem .8rem; }
+  #logList { max-height: none; overflow: visible; }
+
+  .bench { display: flex; flex-direction: column; gap: .4rem; }
+  .unit { padding: .5rem .6rem; }
+  .screw { display: none; }
+  .rig { flex: 1 1 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto auto; gap: .3rem .5rem; }
+  .keyer { flex: 1 1 0; display: flex; flex-direction: column; gap: .35rem; }
+  .rig-top { display: contents; }
+  .window { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; padding: .3rem; }
+  .lcd { padding: .25rem .5rem; }
+  .scope { flex: 1; height: auto; min-height: 1.5rem; margin-top: .25rem; }
+  .scope canvas { position: absolute; inset: 0; }
+  .scale, .lcd-line { display: none; }
+  #dial { font-size: clamp(1.2rem, 6.5vw, 1.6rem); }
+  #trainLcd .lcd-line { display: block; font-size: .62rem; }
+  #trainPos { display: none; }
+  .power-switch { grid-column: 2; grid-row: 1; width: 2.6rem; flex-direction: column; gap: .2rem; }
+  #power { width: 1.6rem; height: 2.4rem; }
+  #power::after { width: .9rem; height: 1.1rem; margin: 0 0 0 -.45rem; top: 55%; left: 50%; transform: none; }
+  #power[aria-pressed=true]::after { top: .1rem; left: 50%; }
+  .strip { grid-column: 1 / -1; grid-row: 2; margin: 0; gap: .5rem; }
+  .plate { padding: .1rem .5rem; font-size: .8rem; }
+  .meter { width: 4rem; height: 2.2rem; }
+  .knobs { grid-column: 1; grid-row: 3; margin: 0; flex-wrap: nowrap; justify-content: space-between; gap: .3rem; }
+  .knob-group { gap: .2rem; }
+  .knob-group .legend { font-size: .56rem; }
+  .knob-sm { width: 2.4rem; height: 2.4rem; }
+  .knob-lg { width: 3rem; height: 3rem; }
+  .knob-xl { width: clamp(3.2rem, 9dvh, 4rem); height: clamp(3.2rem, 9dvh, 4rem); }
+  .tools { grid-column: 2; grid-row: 3; flex-direction: column; justify-content: center; margin: 0; gap: .3rem; }
+  .tools button { min-width: 0; width: 3.6rem; min-height: 2.3rem; padding: .2rem 0; letter-spacing: .08em; }
+  .training .tools button { width: 3.6rem; min-width: 0; }
+  #trainChar { font-size: 2.2rem; line-height: 1; }
+  #trainMorse { font-size: 1.2rem; line-height: 1.1; }
+  #trainLcd .lcd-line { line-height: 1.2; }
+  .train-row { margin-top: .2rem; }
+  .train-row label { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .4rem; }
+  .train-row select { padding: .15rem .3rem; font-size: .85rem; }
+
+  .readout { gap: .25rem; }
+  .readout pre { height: 2.5rem; min-height: 0; max-height: none; padding: .25rem .5rem; font-size: .95rem; }
+  #clearDecoder { padding: .05rem .6rem; }
+  .pad { flex: 1; height: auto; min-height: 2.8rem; margin: 0; }
+  .settings { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: .3rem .6rem; }
+  .settings label { gap: .15rem; }
+  .settings select { padding: .15rem .3rem; }
+  .keymap { gap: .2rem .4rem; }
+  .keymap { grid-column: 1 / -1; flex-wrap: nowrap; }
+
+  #onlinePanel {
+    position: relative; padding: .4rem .6rem;
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .25rem .5rem;
+  }
+  #onlinePanel h2 { margin: 0; grid-row: 1; }
+  #onlineList { grid-row: 1; }
+  #cwConnection { grid-row: 2; }
+  #cwConnection, #chatLog, #chatForm, #chatError { grid-column: 1 / -1; }
+  #cwConnection, #chatError { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; }
+  #cwConnection:empty, #chatError:empty { display: none; }
+  #onlineList { flex-wrap: nowrap; overflow: auto hidden; max-height: none; padding: 0; gap: .3rem .8rem; white-space: nowrap; }
+  #onlinePanel .chat-title { grid-column: 3; grid-row: 1; margin: 0; font-size: 0; }
+  #chatLog { height: auto; min-height: 1.3rem; max-height: 2.5rem; margin: 0; }
+  #chatForm input, #chatForm button { padding: .3rem .5rem; }
+
+  .side details { padding: .1rem .6rem; position: relative; }
+  summary { font-size: .6rem; }
+  .side details[open] .ref {
+    position: absolute; left: 0; bottom: calc(100% + .4rem); z-index: 25;
+    width: calc(100vw - 1rem); max-height: 55dvh; overflow: auto; margin: 0; padding: .7rem;
+    background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px;
+  }
+}
+
+/* Short portrait phones squeeze the fixed parts a little more */
+@media (max-width: 600px) and (max-height: 700px) {
+  .top nav button, .who button, .who .report { min-height: 1.9rem; }
+  .unit { padding: .35rem .5rem; }
+  .rig { gap: .2rem .5rem; }
+  .meter { width: 3.2rem; height: 1.8rem; }
+  .plate { font-size: .7rem; }
+  .knob-xl { width: clamp(3rem, 9dvh, 3.6rem); height: clamp(3rem, 9dvh, 3.6rem); }
+  .knob-lg { width: 2.7rem; height: 2.7rem; }
+  .knob-sm { width: 2.2rem; height: 2.2rem; }
+  .readout pre { height: 2.2rem; }
+  #chatLog { max-height: 1.3rem; }
+  .training .meter, .training .plate { display: none; }
+  .training .strip { min-height: 0; }
+  .training .knob-xl { width: 3rem; height: 3rem; }
+  .training .knob-lg { width: 2.4rem; height: 2.4rem; }
+  #chatForm input, #chatForm button { padding: .2rem .5rem; }
+}
+
+/* Landscape phones: rig and keyer side by side, chat in its own column */
 @media (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
-  .station { grid-template-columns: minmax(0, 1fr); max-width: none; }
-  .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-  .bench > .keyer { grid-column: 2; grid-row: 1 / span 2; }
-  .bench > .rig { grid-column: 1; }
-  #onlinePanel { order: 2; }
-  .logbook { order: 3; }
-  .foot { order: 4; }
-  .side details { order: 5; }
-  .pad { height: max(5.5rem, 34vh); }
+  .top { flex-wrap: nowrap; }
+  .top nav { flex: 0 1 22rem; }
+  .who { flex: 1 1 auto; max-width: 28rem; margin-left: auto; }
+  .station { grid-template-columns: auto minmax(0, 1fr) 13rem; }
+  .bench { grid-column: 1 / 3; flex-direction: row; }
+  .logbook { grid-column: 1 / 3; }
+  .rig, .keyer { flex: 1 1 0; min-width: 0; }
+  .keyer { justify-content: space-between; }
+  .readout pre { height: clamp(2.4rem, 16dvh, 3.4rem); }
+  .pad { flex: 1; height: auto; min-height: 3rem; }
+  .settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #onlinePanel { grid-column: 3; grid-row: 1 / 4; display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
+  #onlineList { flex-wrap: wrap; overflow: auto; max-height: 40%; padding: 0; }
+  #onlinePanel .chat-title { position: static; margin-top: .3rem; font-size: inherit; }
+  #chatLog { flex: 1; max-height: none; }
   .sheet { left: auto; right: .5rem; top: .5rem; bottom: .5rem; width: 16rem; max-height: none; border-radius: 6px; }
-  .rig .window { padding: .3rem; }
-  #dial { font-size: 1.5rem; }
-  .scope { height: 80px; }
-  .knobs { margin-top: .6rem; }
+}
+
+@media (orientation: landscape) and (max-height: 559px) and (pointer: coarse) and (max-width: 760px) {
+  .station { grid-template-columns: auto minmax(0, 1fr) 10.5rem; }
+  .knob-sm { width: 1.9rem; height: 1.9rem; }
+  .knob-lg { width: 2.2rem; height: 2.2rem; }
+  .knob-xl { width: 2.6rem; height: 2.6rem; }
+  .knob-group .legend { font-size: .45rem; letter-spacing: 0; }
+  .knobs { gap: .15rem; }
+  .tools button { width: 2.8rem; min-height: 2rem; font-size: .6rem; }
 }
 
