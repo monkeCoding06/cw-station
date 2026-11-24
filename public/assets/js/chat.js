@@ -10,11 +10,11 @@ let pingContext = null;
 const request = (action, id, extra = {}, keepalive = false) =>
   api('chat_' + action, {post: {view: id, ...extra}, keepalive});
 
-function ping() {
+export function ping(tones = [880, 1320]) {
   if (!pingOn || !pingContext) return;
   pingContext.resume?.();
   const now = pingContext.currentTime;
-  [880, 1320].forEach((hz, i) => {
+  tones.forEach((hz, i) => {
     const osc = pingContext.createOscillator();
     const gain = pingContext.createGain();
     osc.frequency.value = hz;

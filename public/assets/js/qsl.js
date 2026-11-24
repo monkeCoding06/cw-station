@@ -2,6 +2,7 @@ import { $, api, h, isolateKeys } from './util.js';
 import { heardStations } from './contacts.js';
 import { loggedContacts } from './logbook.js';
 import { tunedKHz } from './rig.js';
+import { ping } from './chat.js';
 
 /*
  * QSL cards. A card is a snapshot made by the server when it is sent: both callsigns,
@@ -16,7 +17,11 @@ const imageUrl = hash => 'api.php?' + new URLSearchParams({ action: 'qsl_image',
 
 let panel, body, design, tab = 'received', target = '', returnFocus = null;
 
+let shownCount = 0;
+
 export function setQslCount(count) {
+  if (count > shownCount) ping([988, 1319, 1760]);
+  shownCount = count;
   const badge = $('qslBadge');
   badge.textContent = count;
   badge.hidden = !count;
