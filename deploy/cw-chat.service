@@ -1,0 +1,10 @@
+[Unit]
+Description=CW Station live chat relay
+Requires=cw-chat.socket
+After=cw-chat.socket
+
+[Service]
+ExecStart=/usr/bin/python3 -B /var/www/cw-station/src/chat_relay.py
+User=www-data
+NoNewPrivileges=yes
+LimitCORE=0
