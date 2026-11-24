@@ -1,4 +1,5 @@
 import { $, api } from './util.js';
+import { checkAwards } from './awards.js';
 
 /*
  * Rig appearance. A rig is a small record of whitelisted options; the look comes
@@ -21,10 +22,10 @@ export const PRESETS = {
 };
 
 export const CHOICES = {
-  face: ['matte', 'brushed', 'charcoal', 'vintage'],
-  dial: ['green', 'amber', 'ice'],
-  knob: ['black-silver', 'ribbed', 'bakelite', 'chrome'],
-  meter: ['black', 'cream', 'amber'],
+  face: ['matte', 'brushed', 'charcoal', 'vintage', 'navy', 'olive', 'carbon', 'maroon', 'sand', 'teal', 'blueprint'],
+  dial: ['green', 'amber', 'ice', 'violet', 'red', 'white', 'blue', 'mint'],
+  knob: ['black-silver', 'ribbed', 'bakelite', 'chrome', 'brass', 'copper', 'gold', 'blue', 'titanium', 'red', 'smoke'],
+  meter: ['black', 'cream', 'amber', 'ivory', 'mono', 'sunset', 'night'],
 };
 
 const claimed = document.body.dataset.claimed === '1';
@@ -128,8 +129,10 @@ export function showRig(rig) {
 
 export async function saveRig(rig) {
   rig = clean(rig);
-  if (claimed) await api('rig_save', { post: { rig } });
-  else localStorage.setItem(GUEST_KEY, JSON.stringify(rig));
+  if (claimed) {
+    await api('rig_save', { post: { rig } });
+    checkAwards();
+  } else localStorage.setItem(GUEST_KEY, JSON.stringify(rig));
   saved = rig;
   return rig;
 }

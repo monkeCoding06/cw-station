@@ -22,6 +22,7 @@ const KEEP_MESSAGES_PER_ROOM = 200;
 const ONLINE_WINDOW_SECONDS = 8;             // clients ping every 3 s
 
 require __DIR__ . '/profile.php';
+require __DIR__ . '/awards.php';
 
 class ApiError extends RuntimeException
 {
@@ -127,6 +128,17 @@ function db(): PDO
         );
         CREATE INDEX IF NOT EXISTS qsl_cards_to ON qsl_cards (to_call, id);
         CREATE INDEX IF NOT EXISTS qsl_cards_from ON qsl_cards (from_call, sent_at);
+        CREATE TABLE IF NOT EXISTS achievements (
+            callsign    TEXT NOT NULL,
+            name        TEXT NOT NULL,
+            unlocked_at INTEGER NOT NULL,
+            PRIMARY KEY (callsign, name)
+        );
+        CREATE TABLE IF NOT EXISTS train_counts (
+            callsign TEXT PRIMARY KEY,
+            n        INTEGER NOT NULL,
+            last_at  INTEGER NOT NULL
+        );
     ');
 
     // logged_at 0 marks text that was written before entries were timestamped

@@ -19,7 +19,7 @@ export function openCallMenu(call, anchor) {
   if (!menu.hidden && menu.dataset.call === call) return closeMenu();
   menu.dataset.call = call;
   menu.replaceChildren(
-    h('button', { type: 'button', onclick: () => { closeMenu(); viewRig(call, anchor); } }, 'View rig'),
+    h('button', { type: 'button', onclick: () => { closeMenu(); viewRig(call, anchor); } }, 'View profile'),
     h('button', { type: 'button', onclick: () => { closeMenu(); openQslFor(call); } }, 'Send QSL'),
   );
   menu.hidden = false;
@@ -40,6 +40,14 @@ function miniRig(call, rig) {
   return preview;
 }
 
+function medals(awards) {
+  return h('div', { class: 'medals' },
+    h('h3', {}, `Awards ${awards.length}`),
+    awards.length
+      ? h('ul', {}, awards.map(award => h('li', { title: `Unlocks ${award.skin[0]}: ${award.skin[1]}` }, award.title)))
+      : h('small', {}, 'None yet'));
+}
+
 async function viewRig(call, anchor) {
   returnFocus = anchor;
   const overlay = $('rigView');
@@ -50,8 +58,8 @@ async function viewRig(call, anchor) {
   overlay.hidden = false;
   overlay.querySelector('button').focus();
   try {
-    const { rig } = await api('rig_get', { query: { call } });
-    if (!overlay.hidden) body.replaceChildren(miniRig(call, clean(rig)));
+    const { rig, awards = [] } = await api('rig_get', { query: { call } });
+    if (!overlay.hidden) body.replaceChildren(miniRig(call, clean(rig)), medals(awards));
   } catch (error) {
     body.replaceChildren(h('small', { role: 'alert' }, error.message));
   }

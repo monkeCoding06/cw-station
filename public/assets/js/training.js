@@ -1,5 +1,6 @@
 import { hooks, clearMonitor, setKeyingSpeed } from './keyer.js';
 import { $ } from './util.js';
+import { countTrainCopy } from './awards.js';
 import { ALPHABET, PATTERNS, prettify, textToKeying } from './morse.js';
 import { enableAudio, keyingToRuns, playRuns, stopAllVoices } from './audio.js';
 
@@ -105,6 +106,7 @@ function copy(char) {
   if (!active()) return;
   if (char === current()) {
     index++;
+    countTrainCopy();
     cancelPlayback();
     if (active()) {
       show('Correct');

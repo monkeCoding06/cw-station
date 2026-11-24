@@ -1,12 +1,13 @@
 import { $, api, h, isolateKeys } from './util.js';
 import { queueGuestUpload } from './logbook.js';
+import { loadAwards, lockOf } from './awards.js';
 import { CHOICES, ORIGINAL, PRESETS, applyLook, clean, drawTapes, saveRig, savedRig, showRig } from './rigstyle.js';
 
 const LABELS = { face: 'Faceplate', dial: 'Dial', knob: 'Knob', meter: 'Meter' };
 const SLOT_X = [22, 50, 78];
 const TAPE_Y = 70;
 
-let draft, slots, editor, status;
+let draft, slots, editor, status, awards = [];
 
 const open = () => !editor.hidden;
 
@@ -38,12 +39,15 @@ function build() {
       h('button', { type: 'button', onclick: () => { Object.assign(draft, preset); sync(); } }, name))),
     ...Object.entries(CHOICES).map(([key, values]) => h('fieldset', {},
       h('legend', {}, LABELS[key]),
-      values.map(value => h('label', { class: 'chip' },
-        h('input', {
-          type: 'radio', name: 'rig-' + key, value, checked: draft[key] === value,
-          onchange: () => { draft[key] = value; preview(); },
-        }),
-        h('span', {}, value.replace('-', ' ')))))),
+      values.map(value => {
+        const lock = lockOf(awards, key, value);
+        return h('label', { class: lock ? 'chip locked' : 'chip', title: lock ? 'Locked: ' + lock.how : null },
+          h('input', {
+            type: 'radio', name: 'rig-' + key, value, checked: draft[key] === value, disabled: lock !== null,
+            onchange: () => { draft[key] = value; preview(); },
+          }),
+          h('span', {}, value.replace('-', ' ')));
+      }))),
     h('label', { class: 'check' },
       h('input', { type: 'checkbox', id: 'rigBacklight', checked: draft.backlight, onchange: event => { draft.backlight = event.target.checked; preview(); } }),
       ' Meter backlight'),
@@ -75,7 +79,8 @@ function sync() {
   preview();
 }
 
-function show() {
+async function show() {
+  awards = await loadAwards();
   draft = savedRig();
   slots = slotsFrom(draft);
   editor.hidden = false;

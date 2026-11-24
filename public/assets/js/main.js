@@ -1,6 +1,7 @@
 import { $, api } from './util.js';
 import { initLogbook, queueGuestUpload } from './logbook.js';
 import { initKnobs } from './knobs.js';
+import { checkAwards, closeAwards, initAwardsTab } from './awards.js';
 import * as chat from './chat.js';
 
 const user = document.body.dataset.user;
@@ -161,6 +162,8 @@ async function startApp(callsign) {
   training.initTraining();
   initKnobs();
   rigStyle.initRigStyle();
+  checkAwards();
+  initAwardsTab();
   faceplate.initFaceplate();
   rigEditor.initRigEditor();
   rigView.initRigView();
@@ -176,7 +179,10 @@ async function startApp(callsign) {
 
   let currentRoom = null;
   $('moreToggle').onclick = () => setMoreOpen(!document.querySelector('.settings').classList.contains('more-open'));
-  $('logToggle').onclick = () => setLogOpen(!document.body.classList.contains('log-open'));
+  $('logToggle').onclick = () => {
+    closeAwards();
+    setLogOpen(!document.body.classList.contains('log-open'));
+  };
   $('chatToggle').onclick = () => setChatOpen(!document.body.classList.contains('chat-open'));
   $('chatClose').onclick = () => setChatOpen(false);
   $('chatBox').addEventListener('keydown', event => { if (event.key === 'Escape') setChatOpen(false); });
@@ -194,7 +200,7 @@ async function startApp(callsign) {
     setMoreOpen(false);
     setChatOpen(false);
 
-    for (const button of document.querySelectorAll('#rooms button')) {
+    for (const button of document.querySelectorAll('#rooms [data-room]')) {
       button.setAttribute('aria-pressed', button.dataset.room === name);
     }
     for (const element of document.querySelectorAll('[data-rooms]')) {
@@ -206,9 +212,10 @@ async function startApp(callsign) {
     if (name === 'training') training.enterTraining();
   }
 
-  for (const button of document.querySelectorAll('#rooms button')) {
+  for (const button of document.querySelectorAll('#rooms [data-room]')) {
     button.onclick = () => {
       audio.enableAudio();
+      closeAwards();
       switchRoom(button.dataset.room);
     };
   }

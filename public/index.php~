@@ -1,0 +1,263 @@
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../src/bootstrap.php';
+
+send_security_headers();
+header('Cache-Control: no-store');
+
+$user = current_user();
+$account = $user === null ? null : find_account($user);
+$h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+?>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CW Station</title>
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/js/main.js"></script>
+</head>
+
+<body data-user="<?= $h($user ?? '') ?>" data-claimed="<?= $account === null ? '0' : '1' ?>">
+<?php if ($user === null): ?>
+<main class="login">
+  <h1>CW Station</h1>
+  <form id="loginForm" data-nokey>
+    <input id="callsign" type="text" maxlength="12" placeholder="Callsign" aria-label="Callsign"
+           autocomplete="username" autocapitalize="characters" spellcheck="false" required pattern="[A-Za-z0-9/]{3,12}">
+    <input id="password" type="password" maxlength="72" placeholder="Password" aria-label="Password"
+           autocomplete="current-password" hidden>
+    <button>Enter</button>
+  </form>
+  <p class="claim-note">Choose a callsign for this CW simulator. Claiming it here has no legal effect and grants no on-air privileges.</p>
+  <p id="loginError" role="alert"></p>
+</main>
+<?php else: ?>
+<header class="top" data-nokey>
+  <nav id="rooms" aria-label="Room">
+    <button data-room="general" aria-pressed="false">General</button>
+    <button data-room="echo" aria-pressed="false">Echo</button>
+    <button data-room="practice" aria-pressed="false">Practice</button>
+    <button data-room="training" aria-pressed="false">Training</button>
+  </nav>
+  <div class="who">
+    <strong><?= $h($user) ?></strong>
+    <button id="listen" aria-pressed="false" title="Show others that you are only listening">Just receiving</button>
+<?php if ($account === null): ?>
+    <button id="claim">Claim</button>
+<?php endif; ?>
+    <a class="report" href="https://github.com/monkeCoding06/cw-station/issues" target="_blank" rel="noopener noreferrer">Report bug</a>
+    <button id="logout">Sign out</button>
+  </div>
+</header>
+
+<?php if ($account === null): ?>
+<form id="claimForm" class="claim" data-nokey hidden>
+  <input id="claimPassword" type="password" maxlength="72" placeholder="New password (8+ characters)"
+         aria-label="New password" autocomplete="new-password" required minlength="8">
+  <button>Set password</button>
+  <span id="claimError" role="alert"></span>
+  <small class="claim-note">Choose a callsign for this CW simulator. Claiming it here has no legal effect and grants no on-air privileges.</small>
+</form>
+<?php endif; ?>
+
+<main class="station">
+  <section class="logbook" data-nokey>
+    <div class="page left">
+      <h2>Logbook <span class="clock">UTC <time id="logClock"></time></span></h2>
+      <form id="logForm">
+        <input id="logCall" type="text" maxlength="12" placeholder="Call worked" aria-label="Callsign worked"
+               autocomplete="off" autocapitalize="characters" spellcheck="false" pattern="[A-Za-z0-9/]*">
+        <textarea id="logText" rows="9" maxlength="2000" placeholder="Copy the exchange here" aria-label="Exchange"
+                  spellcheck="false"></textarea>
+        <button>Log it</button>
+      </form>
+      <p id="logStatus" role="status"><?= $account === null ? 'Guest logbook: kept in this browser until you claim.' : '' ?></p>
+    </div>
+    <div class="page right">
+      <input id="logSearch" type="search" placeholder="Search call or text" aria-label="Search logbook"
+             autocomplete="off" spellcheck="false">
+      <div id="logCount"></div>
+      <ol id="logList"></ol>
+    </div>
+  </section>
+
+  <div class="bench">
+
+    <!-- Receiver -->
+    <section class="unit rig" data-rooms="general echo practice" data-nokey>
+      <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+
+      <div class="rig-top">
+        <div class="window">
+          <div class="lcd">
+            <div id="dial">7030.000 kHz</div>
+            <div class="lcd-line">
+              VOL <output id="volOut"></output> RF <output id="rfOut"></output> BW <output id="bwOut"></output>
+            </div>
+          </div>
+          <div class="scope">
+            <canvas id="water" width="720" height="150" aria-label="Waterfall. Click to tune."></canvas>
+            <i id="cursor"></i>
+          </div>
+          <div class="scale" aria-hidden="true">
+            <span class="t0">7029</span><span class="t25">.5</span><span class="t50">7030</span><span class="t75">.5</span><span class="t100">7031 kHz</span>
+          </div>
+        </div>
+
+        <div class="power-switch">
+          <span class="legend">On</span>
+          <button id="power" aria-pressed="false" aria-label="Power"></button>
+          <span class="legend">Off</span>
+        </div>
+      </div>
+
+      <div class="knobs">
+        <div class="knob-group">
+          <span class="legend">Volume</span>
+          <div class="knob knob-lg" data-for="vol" data-label="Volume" data-unit="%" data-px="2"></div>
+          <input id="vol" type="range" min="0" max="100" value="35" hidden>
+        </div>
+        <div class="knob-group">
+          <span class="legend">RF gain</span>
+          <div class="knob knob-sm" data-for="rf" data-label="RF gain" data-unit="dB" data-px="3"></div>
+          <input id="rf" type="range" min="-36" max="48" value="0" hidden>
+        </div>
+        <div class="knob-group">
+          <span class="legend">Bandwidth</span>
+          <div class="knob knob-sm" data-for="bw" data-label="Bandwidth" data-sweep="100" data-px="24"></div>
+          <select id="bw" hidden>
+            <option>200 Hz</option>
+            <option selected>500 Hz</option>
+            <option>900 Hz</option>
+          </select>
+        </div>
+        <div class="knob-group">
+          <span class="legend">Tune</span>
+          <div class="knob knob-xl" data-for="vfo" data-label="Tuning" data-unit="Hz from 7030 kHz" data-sweep="3600" data-px="5"></div>
+          <input id="vfo" type="range" min="-10000" max="10000" step="100" value="0" hidden>
+        </div>
+      </div>
+
+      <div class="tools">
+        <button id="scan" type="button" aria-pressed="false" data-rooms="general" disabled>Scan</button>
+        <button id="tuneStep" type="button" aria-pressed="false" title="Tuning step">100 Hz</button>
+      </div>
+    </section>
+
+    <!-- Training -->
+    <section class="unit rig training" data-rooms="training" data-nokey>
+      <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+
+      <div class="rig-top">
+        <div class="window">
+          <div class="lcd" id="trainLcd">
+            <div id="trainChar" aria-live="polite">–</div>
+            <div id="trainMorse">&nbsp;</div>
+            <div class="lcd-line"><span id="trainPos">&nbsp;</span></div>
+            <div class="lcd-line" id="trainStatus" role="status">Choose a method</div>
+          </div>
+          <div class="train-row">
+            <label><span class="legend">Method</span>
+              <select id="trainMode">
+                <option value="" selected disabled>Choose…</option>
+                <option>Farnsworth</option>
+                <option>Koch</option>
+                <option>Alphabetical</option>
+              </select>
+            </label>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="knobs">
+        <div class="knob-group">
+          <span class="legend"><span id="trainSpeedLabel">Character speed</span> <output id="trainSpeedOut"></output></span>
+          <div class="knob knob-xl" data-for="trainSpeed" data-label="Training speed" data-unit="WPM" data-px="8"></div>
+          <input id="trainSpeed" type="range" min="5" max="40" value="20" hidden>
+        </div>
+        <div class="knob-group">
+          <span class="legend">Volume <output id="trainVolOut"></output></span>
+          <div class="knob knob-lg" data-for="vol" data-label="Volume" data-unit="%" data-px="2"></div>
+        </div>
+      </div>
+
+      <div class="tools">
+        <button id="trainReplay" type="button" disabled>Replay</button>
+        <button id="trainRestart" type="button" disabled>Restart</button>
+      </div>
+    </section>
+
+    <!-- Keyer -->
+    <section class="unit keyer" data-rooms="general echo practice training">
+      <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+
+      <div class="readout">
+        <pre id="rx" aria-live="polite">▏</pre>
+        <div class="readout-foot" data-nokey>
+          <div id="signal">Ready</div>
+          <button id="clearDecoder">Clear</button>
+        </div>
+      </div>
+
+      <div id="pad">
+        <button id="padDit" type="button"></button>
+        <button id="padDah" type="button">Dah  −</button>
+      </div>
+
+      <div class="settings" data-nokey>
+        <label><span class="legend">Keyer</span>
+          <select id="mode">
+            <option>Iambic B</option>
+            <option>Iambic A</option>
+            <option>Straight key</option>
+          </select>
+        </label>
+        <label data-rooms="general echo practice"><span class="legend">Speed <output id="speedOut"></output></span>
+          <input type="range" id="speed" min="5" max="40" value="16">
+        </label>
+        <label><span class="legend">Sidetone <output id="pitchOut"></output></span>
+          <input type="range" id="pitch" min="350" max="950" step="10" value="600">
+        </label>
+        <div class="keymap">
+          <span class="legend">Keys</span>
+          <span>Dit <button id="ditKey" type="button" title="Click, then press a key"></button></span>
+          <span>Dah <button id="dahKey" type="button" title="Click, then press a key"></button></span>
+        </div>
+        <label data-rooms="general echo"><span class="legend">Latency <output id="latencyOut"></output></span>
+          <input type="range" id="latency" min="0" max="3000" step="50" value="0">
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <div class="side">
+    <aside id="onlinePanel" data-nokey>
+      <h2>Online <span id="onlineCount">0</span></h2>
+      <small id="cwConnection" role="status"></small>
+      <ul id="onlineList"></ul>
+      <h2 class="chat-title">Chat</h2>
+      <ol id="chatLog" aria-live="polite"></ol>
+      <form id="chatForm" autocomplete="off">
+        <input id="chatText" disabled type="text" maxlength="200" placeholder="Say something" aria-label="Chat message">
+        <button id="chatSend" disabled type="submit">Send</button>
+      </form>
+      <small id="chatError" role="alert"></small>
+    </aside>
+
+    <details data-nokey>
+      <summary>Morse chart</summary>
+      <div class="ref" id="ref"></div>
+    </details>
+  </div>
+
+  <footer class="foot" data-nokey>
+    Made by OE2KFL with &lt;3 · Heavily inspired by <a href="https://vailmorse.com" target="_blank" rel="noopener noreferrer">vailmorse.com</a> · <a href="https://github.com/monkeCoding06" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </footer>
+</main>
+<?php endif; ?>
+</body>
+</html>

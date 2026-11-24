@@ -43,6 +43,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
     <button data-room="echo" aria-pressed="false">Echo</button>
     <button data-room="practice" aria-pressed="false">Practice</button>
     <button data-room="training" aria-pressed="false">Training</button>
+    <button id="awardsTab" type="button" aria-pressed="false">Awards</button>
   </nav>
   <div class="who">
     <strong><?= $h($user) ?></strong>
@@ -247,6 +248,8 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
       </div>
     </section>
   </div>
+
+  <section id="awardsPage" class="awards-page" data-nokey aria-label="Awards"></section>
 
   <div class="side">
     <aside id="onlinePanel" data-nokey>

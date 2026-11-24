@@ -3,6 +3,7 @@ import { heardStations } from './contacts.js';
 import { loggedContacts } from './logbook.js';
 import { tunedKHz } from './rig.js';
 import { ping } from './chat.js';
+import { checkAwards } from './awards.js';
 
 /*
  * QSL cards. A card is a snapshot made by the server when it is sent: both callsigns,
@@ -104,6 +105,7 @@ function showSend() {
     try {
       await api('qsl_send', { post: { to: target, freq: freqText() } });
       status.textContent = `Sent to ${target}`;
+      checkAwards();
     } catch (error) {
       status.textContent = error.message;
     }

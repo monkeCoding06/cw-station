@@ -1,4 +1,5 @@
 import { $, api } from './util.js';
+import { checkAwards } from './awards.js';
 
 /*
  * The station logbook. Claimed callsigns keep it on the server; guests keep it
@@ -19,7 +20,11 @@ export const loggedContacts = () => [...new Set(entries.map(entry => entry.conta
 
 const serverStore = {
   async list() { return (await api('log_list')).entries; },
-  async add(entry) { return (await api('log_add', { post: entry })).entry; },
+  async add(entry) {
+    const { entry: saved } = await api('log_add', { post: entry });
+    checkAwards();
+    return saved;
+  },
   async remove(id) { await api('log_delete', { post: { id } }); },
 };
 

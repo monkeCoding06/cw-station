@@ -739,6 +739,44 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
 :is(.bench, .rigview)[data-meter=amber] { --meter-face: #3a2608; --meter-lit-face: #7a4d0f; --meter-ink: #ffcf6b; --meter-needle: #fff1c8; --meter-glow: #ffa31f; }
 :is(.bench, .rigview)[data-backlight=true] { --meter-face: var(--meter-lit-face); }
 
+/* skins that have to be unlocked */
+:is(.bench, .rigview)[data-face=navy] { --face-bg: linear-gradient(#2a3b57, #172234); --face-line: #080c13; --face-hi: #4d668c; }
+:is(.bench, .rigview)[data-face=olive] { --face-bg: linear-gradient(#4a5238, #2f3524); --face-line: #11140b; --face-hi: #727e55; }
+:is(.bench, .rigview)[data-face=carbon] {
+  --face-bg:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 2px, rgba(0, 0, 0, .28) 2px 4px),
+    linear-gradient(#1f2022, #101112);
+  --face-line: #000; --face-hi: #3d4044;
+}
+:is(.bench, .rigview)[data-dial=violet] { --lcd-on: #c9a0ff; --lcd-ink: #1d0a38; --lcd-off: #231634; --lcd-dim: #4a3668; --lcd-glow: rgba(201, 160, 255, .3); --lcd-shade: rgba(60, 20, 110, .4); }
+:is(.bench, .rigview)[data-dial=red] { --lcd-on: #ff6a5a; --lcd-ink: #3a0600; --lcd-off: #33120e; --lcd-dim: #5e2a22; --lcd-glow: rgba(255, 106, 90, .32); --lcd-shade: rgba(120, 20, 10, .4); }
+:is(.bench, .rigview)[data-knob=brass] .knob-dial { background: conic-gradient(#f0d78a, #a07a22, #fbe9a8, #8a6418, #f0d78a); box-shadow: inset 0 0 0 2px #0004; }
+:is(.bench, .rigview)[data-knob=copper] .knob-dial { background: radial-gradient(circle at 35% 28%, #e8a577, #a65a2e 60%, #5a2a12); box-shadow: inset 0 0 0 2px #0005; }
+:is(.bench, .rigview)[data-knob=gold] .knob-dial { background: conic-gradient(#fff2b0, #d4a62a, #fff8d0, #b8861a, #fff2b0); box-shadow: inset 0 0 0 2px #0004; }
+:is(.bench, .rigview)[data-knob=brass], :is(.bench, .rigview)[data-knob=gold] { --knob-mark: #1a1208; }
+:is(.bench, .rigview)[data-meter=ivory] { --meter-face: #f3efe3; --meter-lit-face: #fffbe8; --meter-ink: #1f2a1f; --meter-needle: #1f5fbf; --meter-glow: #fff2b0; }
+:is(.bench, .rigview)[data-face=maroon] { --face-bg: linear-gradient(#5a2230, #34121c); --face-line: #12060a; --face-hi: #8a4458; }
+:is(.bench, .rigview)[data-face=sand] { --face-bg: linear-gradient(#8c7d57, #66593b); --face-line: #26200f; --face-hi: #b4a479; }
+:is(.bench, .rigview)[data-face=teal] { --face-bg: linear-gradient(#1f5a5c, #123637); --face-line: #061515; --face-hi: #3f8c8e; }
+:is(.bench, .rigview)[data-face=blueprint] {
+  --face-bg:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .08) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .08) 0 1px, transparent 1px 14px),
+    linear-gradient(#1c4f9c, #123672);
+  --face-line: #050f26; --face-hi: #4f86d6;
+}
+:is(.bench, .rigview)[data-dial=white] { --lcd-on: #f2f5f7; --lcd-ink: #0b1114; --lcd-off: #1d2326; --lcd-dim: #4d575c; --lcd-glow: rgba(242, 245, 247, .28); --lcd-shade: rgba(40, 60, 70, .4); }
+:is(.bench, .rigview)[data-dial=blue] { --lcd-on: #5aa8ff; --lcd-ink: #04182e; --lcd-off: #0f1f33; --lcd-dim: #2c4a70; --lcd-glow: rgba(90, 168, 255, .3); --lcd-shade: rgba(0, 30, 90, .4); }
+:is(.bench, .rigview)[data-dial=mint] { --lcd-on: #7dffc4; --lcd-ink: #032a18; --lcd-off: #0f2a1e; --lcd-dim: #2a5a43; --lcd-glow: rgba(125, 255, 196, .3); --lcd-shade: rgba(0, 80, 40, .4); }
+:is(.bench, .rigview)[data-knob=blue] .knob-dial { background: radial-gradient(circle at 35% 28%, #7fb2ff, #2b5fc4 60%, #112a60); box-shadow: inset 0 0 0 2px #0005; }
+:is(.bench, .rigview)[data-knob=red] .knob-dial { background: radial-gradient(circle at 35% 28%, #ff8a80, #c0271c 60%, #5a0e08); box-shadow: inset 0 0 0 2px #0005; }
+:is(.bench, .rigview)[data-knob=titanium] .knob-dial { background: conic-gradient(#b9bcc0, #6d7075, #d5d8dc, #5a5d62, #b9bcc0); box-shadow: inset 0 0 0 2px #0004; }
+:is(.bench, .rigview)[data-knob=smoke] .knob-dial { background: radial-gradient(circle at 35% 28%, #55585c, #25272a 60%, #0c0d0e); box-shadow: inset 0 0 0 2px #fff2; }
+:is(.bench, .rigview)[data-knob=titanium] { --knob-mark: #1a1a1a; }
+:is(.bench, .rigview)[data-meter=mono] { --meter-face: #0d0d0d; --meter-lit-face: #262626; --meter-ink: #f2f2f2; --meter-needle: #ffffff; --meter-glow: #ffffff; }
+:is(.bench, .rigview)[data-meter=sunset] { --meter-face: #4a2233; --meter-lit-face: #f08a4b; --meter-ink: #fff0d8; --meter-needle: #2a0a14; --meter-glow: #ff9a5a; }
+:is(.bench, .rigview)[data-meter=night] { --meter-face: #0c1a33; --meter-lit-face: #1d4a8f; --meter-ink: #bcd9ff; --meter-needle: #ffd36b; --meter-glow: #5aa8ff; }
+
 .strip { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .7rem; }
 .plate {
   max-width: 55%;
@@ -811,6 +849,30 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
 .chip span { display: block; padding: .3rem .6rem; border: 1px solid var(--panel-edge); border-radius: 3px; color: var(--print-dim); font-size: .8rem; text-transform: capitalize; }
 .chip input:checked + span { border-color: var(--accent); color: var(--print); }
 .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip.locked span { opacity: .4; border-style: dashed; }
+.chip.locked input { cursor: not-allowed; }
+.awards-page { display: none; }
+body.awards-open .awards-page {
+  display: block; grid-column: 1 / 3; grid-row: 1; min-height: 0; overflow: auto; padding: .8rem 1rem;
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px;
+}
+body.awards-open .bench, body.awards-open .logbook { display: none; }
+.awards-page h2 { display: flex; justify-content: space-between; margin: 0 0 .6rem; font: var(--legend); letter-spacing: .14em; text-transform: uppercase; }
+.awards { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .5rem; }
+.awards li { display: grid; grid-template-columns: 1fr auto; gap: .25rem .6rem; align-items: center; padding: .5rem .6rem; background: #0e0e0d; border: 1px solid var(--panel-edge); border-radius: 4px; }
+.awards li > span { display: grid; gap: .1rem; }
+.awards li.done { border-color: var(--accent); }
+.awards strong { font-size: .85rem; }
+.awards small { font-size: .7rem; color: var(--print-dim); }
+.awards .reward { color: var(--accent); }
+.awards .tick { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--accent); color: #1a1408; font-size: .95rem; }
+.awards progress { grid-column: 1 / -1; width: 100%; height: .4rem; accent-color: var(--accent); }
+.awards-note { margin: .8rem 0 0; font-size: .75rem; color: var(--print-dim); }
+.toast {
+  position: fixed; top: .6rem; left: 50%; transform: translateX(-50%); z-index: 70; max-width: calc(100vw - 1rem);
+  padding: .5rem .9rem; background: var(--panel); border: 1px solid var(--accent); border-radius: 6px;
+  color: var(--print); font-size: .85rem; box-shadow: 0 .4rem 1.2rem rgba(0, 0, 0, .6);
+}
 .check { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
 .tape-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; width: 100%; }
 .tape-inputs input { min-width: 0; font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; }
@@ -836,6 +898,10 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
 .claim-rig { display: flex; gap: .4rem; }
 .claim-rig input { flex: 1; min-width: 0; }
 .rigview .plate { max-width: 100%; padding: .3rem 1rem; font-size: 1.25rem; }
+.medals { margin-top: .6rem; }
+.medals h3 { margin: 0 0 .3rem; font: var(--legend); letter-spacing: .12em; text-transform: uppercase; }
+.medals ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .3rem; max-height: 8rem; overflow: auto; }
+.medals li { padding: .15rem .5rem; border: 1px solid var(--accent); border-radius: 999px; font-size: .75rem; color: var(--print); }
 .mini-dial { font-size: 1.6rem; font-weight: 700; letter-spacing: .06em; line-height: 1.2; }
 .mini-row { display: flex; align-items: center; gap: 1rem; margin-top: .7rem; }
 .mini-row .pad { flex: 1; height: 4.5rem; margin: 0; }
@@ -1044,3 +1110,18 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .tools button { width: 2.8rem; min-height: 2rem; font-size: .6rem; }
 }
 
+/* awards tab replaces the logbook and rig */
+@media (max-width: 1199px), (max-height: 559px) {
+  body.awards-open .awards-page { grid-column: 1 / -1; grid-row: auto; order: 1; }
+}
+
+@media (max-width: 600px), (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
+  body.awards-open .awards-page { grid-column: 1 / -1; grid-row: 2; order: 0; padding: .5rem .6rem; }
+  .awards { grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: .35rem; }
+  .top nav button { font-size: .78rem; }
+}
+
+@media (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
+  body.awards-open .awards-page { grid-column: 1 / 3; grid-row: 1; }
+  .top nav { flex-basis: 26rem; }
+}

@@ -120,7 +120,7 @@ function handle_rig_get(): never
     if (preg_match(CALLSIGN_PATTERN, $call) !== 1) {
         throw new ApiError(400, 'Invalid callsign');
     }
-    respond(['rig' => load_rig($call)]);
+    respond(['rig' => load_rig($call), 'awards' => award_unlocked($call)]);
 }
 
 function handle_rig_save(): never
@@ -128,8 +128,35 @@ function handle_rig_save(): never
     $body = read_post_body();
     $user = require_user();
     require_account($user);
-    save_rig($user, validate_rig($body['rig'] ?? null));
+    $rig = validate_rig($body['rig'] ?? null);
+    award_sync($user);
+    if (($locked = rig_locked_skin($user, $rig)) !== null) {
+        throw new ApiError(403, 'Locked skin: ' . $locked[2]);
+    }
+    save_rig($user, $rig);
     respond(['ok' => true]);
+}
+
+// list of awards, with progress for signed-in users
+function handle_awards(): never
+{
+    $user = require_user();
+    if (find_account($user) === null) {
+        respond(['awards' => award_state(null), 'new' => []]);
+    }
+    $fresh = award_sync($user);
+    respond(['awards' => award_state($user), 'new' => $fresh]);
+}
+
+// one correct trainer copy
+function handle_award_train(): never
+{
+    read_post_body();
+    $user = require_user();
+    require_account($user);
+    award_train_copy($user);
+    $fresh = award_sync($user);
+    respond(['awards' => award_state($user), 'new' => $fresh]);
 }
 
 function handle_qsl_design_get(): never
@@ -335,6 +362,8 @@ try {
         'claim' => handle_claim(),
         'rig_get' => handle_rig_get(),
         'rig_save' => handle_rig_save(),
+        'awards' => handle_awards(),
+        'award_train' => handle_award_train(),
         'qsl_design_get' => handle_qsl_design_get(),
         'qsl_design_save' => handle_qsl_design_save(),
         'qsl_image_upload' => handle_qsl_image_upload(),
