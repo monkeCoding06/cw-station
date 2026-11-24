@@ -196,7 +196,7 @@ async function poll(mine) {
     const data = await api('cw_poll', {post: {view}});
     if (mine !== generation) return;
     if (performance.now() - started < 4000) {
-      for (const message of data.messages) receive(message.call, message);
+      for (const message of data.messages ?? []) receive(message.call, message);
     }
     showOnline(data.online);
   } catch (error) {

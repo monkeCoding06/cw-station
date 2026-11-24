@@ -1,5 +1,5 @@
 import { $, api, h, isolateKeys } from './util.js';
-import { applyLook, clean, drawTapes } from './rigstyle.js';
+import { applyLook, clean } from './rigstyle.js';
 import { previewStrip } from './faceplate.js';
 import { openQslFor } from './qsl.js';
 
@@ -33,13 +33,10 @@ function miniRig(call, rig) {
   const preview = h('div', { class: 'rigview' });
   applyLook(preview, rig);
   const dial = h('div', { class: 'knob knob-lg' }, h('div', { class: 'knob-dial' }));
-  const tapes = h('div', { class: 'tapes' });
   preview.append(h('div', { class: 'unit' },
     h('div', { class: 'lcd lit' }, h('div', { class: 'mini-dial' }, '7030.000 kHz')),
     previewStrip(call),
-    h('div', { class: 'mini-row' }, dial, h('div', { class: 'pad' }, h('span'), h('span'))),
-    tapes));
-  drawTapes(tapes, rig);
+    h('div', { class: 'mini-row' }, dial, h('div', { class: 'pad' }, h('span'), h('span')))));
   return preview;
 }
 

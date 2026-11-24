@@ -99,6 +99,12 @@ function setLogOpen(open) {
   $('logToggle').setAttribute('aria-pressed', String(open));
 }
 
+function setChatOpen(open) {
+  document.body.classList.toggle('chat-open', open);
+  $('chatToggle').setAttribute('aria-expanded', String(open));
+  if (open && getComputedStyle($('chatBox')).display !== 'contents') $('chatText').focus();
+}
+
 const SAVED_SETTINGS = ['mode', 'speed', 'pitch', 'vol', 'latency', 'vfo', 'rf', 'bw'];
 const SETTINGS_KEY = 'cw-settings-v1';
 
@@ -171,6 +177,9 @@ async function startApp(callsign) {
   let currentRoom = null;
   $('moreToggle').onclick = () => setMoreOpen(!document.querySelector('.settings').classList.contains('more-open'));
   $('logToggle').onclick = () => setLogOpen(!document.body.classList.contains('log-open'));
+  $('chatToggle').onclick = () => setChatOpen(!document.body.classList.contains('chat-open'));
+  $('chatClose').onclick = () => setChatOpen(false);
+  $('chatBox').addEventListener('keydown', event => { if (event.key === 'Escape') setChatOpen(false); });
 
   function switchRoom(name) {
     if (name === currentRoom) return;
@@ -183,6 +192,7 @@ async function startApp(callsign) {
     keyer.clearMonitor();
     setLogOpen(false);
     setMoreOpen(false);
+    setChatOpen(false);
 
     for (const button of document.querySelectorAll('#rooms button')) {
       button.setAttribute('aria-pressed', button.dataset.room === name);

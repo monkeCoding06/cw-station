@@ -253,13 +253,16 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
       <h2>Online <span id="onlineCount">0</span></h2>
       <small id="cwConnection" role="status"></small>
       <ul id="onlineList"></ul>
-      <h2 class="chat-title">Chat <button id="chatPing" type="button" aria-pressed="false" title="Play a ping when someone else writes">Ping off</button></h2>
-      <ol id="chatLog" aria-live="polite"></ol>
-      <form id="chatForm" autocomplete="off">
-        <input id="chatText" disabled type="text" maxlength="200" placeholder="Say something" aria-label="Chat message">
-        <button id="chatSend" disabled type="submit">Send</button>
-      </form>
-      <small id="chatError" role="alert"></small>
+      <button id="chatToggle" type="button" aria-expanded="false" aria-controls="chatBox">Chat</button>
+      <div id="chatBox" class="chat-box">
+        <h2 class="chat-title">Chat <button id="chatPing" type="button" aria-pressed="false" title="Play a ping when someone else writes">Ping off</button><button id="chatClose" type="button">Close</button></h2>
+        <ol id="chatLog" aria-live="polite"></ol>
+        <form id="chatForm" autocomplete="off">
+          <input id="chatText" disabled type="text" maxlength="200" placeholder="Say something" aria-label="Chat message">
+          <button id="chatSend" disabled type="submit">Send</button>
+        </form>
+        <small id="chatError" role="alert"></small>
+      </div>
     </aside>
 
     <details data-nokey>

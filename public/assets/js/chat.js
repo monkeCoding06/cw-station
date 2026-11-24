@@ -113,7 +113,7 @@ async function poll(id) {
       controls();
       $('chatError').textContent = '';
     }
-    const {messages} = await request('poll', id);
+    const {messages = []} = await request('poll', id);
     if (view !== id) return;
     const log = $('chatLog');
     const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;

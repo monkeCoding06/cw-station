@@ -1,4 +1,5 @@
-import { $, h, isolateKeys } from './util.js';
+import { $, api, h, isolateKeys } from './util.js';
+import { queueGuestUpload } from './logbook.js';
 import { CHOICES, ORIGINAL, PRESETS, applyLook, clean, drawTapes, saveRig, savedRig, showRig } from './rigstyle.js';
 
 const LABELS = { face: 'Faceplate', dial: 'Dial', knob: 'Knob', meter: 'Meter' };
@@ -57,6 +58,10 @@ function build() {
           preview();
         },
       })))),
+    ...(claimed ? [] : [h('fieldset', { class: 'claim-rig' },
+      h('legend', {}, 'Claim callsign'),
+      h('input', { type: 'password', id: 'rigClaimPassword', maxlength: 72, placeholder: 'New password (8+ characters)', autocomplete: 'new-password', 'aria-label': 'New password' }),
+      h('button', { type: 'button', onclick: claim }, 'Claim'))]),
     h('div', { class: 'row actions' },
       h('button', { type: 'button', class: 'primary', onclick: save }, 'Save'),
       h('button', { type: 'button', onclick: cancel }, 'Cancel'),
@@ -96,6 +101,20 @@ function restore() {
   draft = clean(ORIGINAL);
   slots = slotsFrom(draft);
   sync();
+}
+
+const claimed = document.body.dataset.claimed === '1';
+
+/** Claims the callsign, then stores this draft on the server so the rig follows the account. */
+async function claim() {
+  try {
+    await api('claim', { post: { password: $('rigClaimPassword').value } });
+    queueGuestUpload(document.body.dataset.user);
+    await api('rig_save', { post: { rig: clean(draftRig()) } });
+    location.reload();
+  } catch (error) {
+    status.textContent = error.message;
+  }
 }
 
 async function save() {

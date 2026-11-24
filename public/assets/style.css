@@ -519,6 +519,8 @@ body.tx #signal { color: var(--accent); }
 #chatForm { display: flex; gap: .3rem; }
 #chatForm input { flex: 1; min-width: 0; }
 #chatError { color: var(--margin); }
+.chat-box { display: contents; }
+#chatToggle, #chatClose { display: none; }
 
 /* ---------- Training (reuses the rig panel) ---------- */
 
@@ -831,7 +833,9 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
 #qslBadge { padding: 0 .35rem; background: var(--accent); border-radius: 999px; color: #1a1408; font-size: .7rem; }
 
 .rigview .unit { padding-top: 1rem; }
-.rigview .tapes { z-index: 3; }
+.claim-rig { display: flex; gap: .4rem; }
+.claim-rig input { flex: 1; min-width: 0; }
+.rigview .plate { max-width: 100%; padding: .3rem 1rem; font-size: 1.25rem; }
 .mini-dial { font-size: 1.6rem; font-weight: 700; letter-spacing: .06em; line-height: 1.2; }
 .mini-row { display: flex; align-items: center; gap: 1rem; margin-top: .7rem; }
 .mini-row .pad { flex: 1; height: 4.5rem; margin: 0; }
@@ -863,7 +867,7 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
 /* ---------- Phones: everything fits one viewport, no page scroll ---------- */
 
 @media (max-width: 600px), (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
-  body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  body { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
   .long { display: none; }
   .short, #logToggle { display: inline; }
   .more-btn { display: block; align-self: end; min-height: 2.1rem; padding: .1rem .4rem; background: #0e0e0d; border: 1px solid #444; border-radius: 3px; }
@@ -886,11 +890,11 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .station {
     flex: 1; min-height: 0; width: 100%; margin: 0; padding: .4rem .5rem; gap: .4rem;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     justify-content: stretch; align-items: stretch;
   }
-  .bench, .logbook { grid-column: 1 / -1; grid-row: 1; min-height: 0; }
-  #onlinePanel { grid-column: 1 / -1; grid-row: 2; }
+  .bench, .logbook { grid-column: 1 / -1; grid-row: 2; min-height: 0; }
+  #onlinePanel { grid-column: 1 / -1; grid-row: 1; }
   .side details { grid-column: 1; grid-row: 3; }
   .foot { grid-column: 2; grid-row: 3; padding: 0; text-align: right; align-self: center; font-size: .56rem; line-height: 1.25; }
   .bench, .side details, .foot, #onlinePanel { order: 0; }
@@ -905,12 +909,13 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .bench { display: flex; flex-direction: column; gap: .4rem; }
   .unit { padding: .5rem .6rem; }
   .screw { display: none; }
-  .rig { flex: 1 1 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto auto; gap: .3rem .5rem; }
-  .keyer { flex: 1 1 0; display: flex; flex-direction: column; gap: .35rem; }
+  .rig { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; gap: .3rem .5rem; }
+  .keyer { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: .35rem; }
+  .keyer .readout, .keyer .settings { flex: none; }
   .rig-top { display: contents; }
   .window { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; padding: .3rem; }
   .lcd { padding: .25rem .5rem; }
-  .scope { flex: 1; height: auto; min-height: 1.5rem; margin-top: .25rem; }
+  .scope { flex: none; height: 3rem; margin-top: .25rem; }
   .scope canvas { position: absolute; inset: 0; }
   .scale, .lcd-line { display: none; }
   #dial { font-size: clamp(1.2rem, 6.5vw, 1.6rem); }
@@ -942,7 +947,7 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .readout { gap: .25rem; }
   .readout pre { height: 2.5rem; min-height: 0; max-height: none; padding: .25rem .5rem; font-size: .95rem; }
   #clearDecoder { padding: .05rem .6rem; }
-  .pad { flex: 1; height: auto; min-height: 2.8rem; margin: 0; }
+  .pad { flex: 1; height: auto; min-height: 1.8rem; margin: 0; }
   .settings { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: .3rem .6rem; }
   .settings label { gap: .15rem; }
   .settings select { padding: .15rem .3rem; }
@@ -956,13 +961,28 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   #onlinePanel h2 { margin: 0; grid-row: 1; }
   #onlineList { grid-row: 1; }
   #cwConnection { grid-row: 2; }
-  #cwConnection, #chatLog, #chatForm, #chatError { grid-column: 1 / -1; }
+  #cwConnection { grid-column: 1 / -1; }
   #cwConnection, #chatError { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; }
   #cwConnection:empty, #chatError:empty { display: none; }
   #onlineList { flex-wrap: nowrap; overflow: auto hidden; max-height: none; padding: 0; gap: .3rem .8rem; white-space: nowrap; }
-  #onlinePanel .chat-title { grid-column: 3; grid-row: 1; margin: 0; font-size: 0; }
-  #chatLog { height: auto; min-height: 1.3rem; max-height: 2.5rem; margin: 0; }
-  #chatForm input, #chatForm button { padding: .3rem .5rem; }
+  #chatToggle, #chatClose {
+    display: block; grid-column: 3; grid-row: 1; padding: .2rem .7rem; background: none; cursor: pointer;
+    border: 1px solid var(--panel-edge); border-radius: 3px; color: var(--print);
+    font: 600 .7rem/1.4 "Segoe UI", system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  }
+  #chatToggle[aria-expanded=true] { color: #1a1408; background: var(--accent); border-color: var(--accent); }
+  .chat-box {
+    display: none; position: fixed; z-index: 40; left: .5rem; right: .5rem; bottom: .5rem;
+    height: min(60dvh, 22rem); padding: .6rem; flex-direction: column; gap: .4rem;
+    background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px;
+    box-shadow: 0 -.5rem 1.5rem rgba(0, 0, 0, .6);
+  }
+  body.chat-open .chat-box { display: flex; }
+  .chat-box .chat-title { display: flex; align-items: center; gap: .5rem; margin: 0; }
+  #chatClose { grid-column: auto; margin-left: auto; }
+  #chatPing { float: none; }
+  #chatLog { flex: 1; height: auto; min-height: 0; margin: 0; }
+  #chatForm input, #chatForm button { padding: .4rem .6rem; }
 
   .side details { padding: .1rem .6rem; position: relative; }
   summary { font-size: .6rem; }
@@ -984,12 +1004,10 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .knob-lg { width: 2.7rem; height: 2.7rem; }
   .knob-sm { width: 2.2rem; height: 2.2rem; }
   .readout pre { height: 2.2rem; }
-  #chatLog { max-height: 1.3rem; }
   .training .meter, .training .plate { display: none; }
   .training .strip { min-height: 0; }
   .training .knob-xl { width: 3rem; height: 3rem; }
   .training .knob-lg { width: 2.4rem; height: 2.4rem; }
-  #chatForm input, #chatForm button { padding: .2rem .5rem; }
 }
 
 /* Landscape phones: rig and keyer side by side, chat in its own column */
@@ -1000,15 +1018,19 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .station { grid-template-columns: auto minmax(0, 1fr) 13rem; }
   .bench { grid-column: 1 / 3; flex-direction: row; }
   .logbook { grid-column: 1 / 3; }
+  .station { grid-template-rows: minmax(0, 1fr) auto auto; }
+  .bench, .logbook { grid-row: 1; }
   .rig, .keyer { flex: 1 1 0; min-width: 0; }
+  .rig { grid-template-rows: minmax(0, 1fr) auto auto; }
+  .scope { flex: 1; height: auto; min-height: 1.5rem; }
   .keyer { justify-content: space-between; }
   .readout pre { height: clamp(2.4rem, 16dvh, 3.4rem); }
   .pad { flex: 1; height: auto; min-height: 3rem; }
   .settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #onlinePanel { grid-column: 3; grid-row: 1 / 4; display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
   #onlineList { flex-wrap: wrap; overflow: auto; max-height: 40%; padding: 0; }
-  #onlinePanel .chat-title { position: static; margin-top: .3rem; font-size: inherit; }
-  #chatLog { flex: 1; max-height: none; }
+  #chatToggle { margin-top: .3rem; }
+  .chat-box { left: auto; width: 16rem; top: .5rem; height: auto; }
   .sheet { left: auto; right: .5rem; top: .5rem; bottom: .5rem; width: 16rem; max-height: none; border-radius: 6px; }
 }
 
