@@ -205,7 +205,7 @@ function handle_qsl_send(): never
     $body = read_post_body();
     $user = require_user();
     $to = strtoupper(is_string($body['to'] ?? null) ? $body['to'] : '');
-    respond(send_qsl($user, $to, $body['freq'] ?? null));
+    respond(send_qsl($user, $to));
 }
 
 function handle_qsl_inbox(): never

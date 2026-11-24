@@ -1,7 +1,6 @@
 import { $, api, h, isolateKeys } from './util.js';
 import { heardStations } from './contacts.js';
 import { loggedContacts } from './logbook.js';
-import { tunedKHz } from './rig.js';
 import { ping } from './chat.js';
 import { checkAwards } from './awards.js';
 
@@ -29,7 +28,7 @@ export function setQslCount(count) {
 }
 
 /** The card as the recipient sees it. */
-export function renderCard({ from, to, date, freq, design: d }) {
+export function renderCard({ from, to, date, design: d }) {
   const card = h('div', { class: 'qsl', 'data-style': d.style });
   card.style.setProperty('--q-bg', d.bg);
   card.style.setProperty('--q-ink', d.ink);
@@ -43,7 +42,7 @@ export function renderCard({ from, to, date, freq, design: d }) {
       h('span', { class: 'q-tag' }, 'QSL'),
       h('strong', {}, from),
       h('span', {}, 'to ' + to),
-      h('time', {}, date + ' UTC' + (freq ? ' · ' + freq + ' kHz' : '')),
+      h('time', {}, date + ' UTC'),
       d.note && h('em', {}, d.note)));
   return card;
 }
@@ -83,27 +82,21 @@ function showSend() {
     type: 'text', maxlength: 12, placeholder: 'Callsign', 'aria-label': 'Station worked', autocomplete: 'off',
     autocapitalize: 'characters', spellcheck: 'false', value: target,
   });
-  const freqInput = h('input', {
-    type: 'text', inputmode: 'decimal', maxlength: 9, size: 9, class: 'freq', 'aria-label': 'Frequency in kHz', value: tunedKHz(),
-    autocomplete: 'off', spellcheck: 'false',
-  });
   const sendButton = h('button', { type: 'button', class: 'primary' }, 'Send card');
-  const validFreq = () => /^\d{1,5}(\.\d{1,3})?$/.test(freqInput.value.trim()) && +freqInput.value >= 100 && +freqInput.value <= 60000;
-  const freqText = () => (+freqInput.value.trim()).toFixed(3);
 
   const redraw = () => {
     target = input.value.trim().toUpperCase();
     status.textContent = '';
-    sendButton.disabled = !/^[A-Z0-9/]{3,12}$/.test(target) || target === me || !validFreq();
-    preview.replaceChildren(...(target ? [renderCard({ from: me, to: target, date: todayUtc(), freq: validFreq() ? freqText() : '', design })] : []));
+    sendButton.disabled = !/^[A-Z0-9/]{3,12}$/.test(target) || target === me ;
+       preview.replaceChildren(...(target ? [renderCard({ from: me, to: target, date: todayUtc(), design })] : []));
   };
-  input.oninput = freqInput.oninput = redraw;
+     input.oninput = redraw;
 
   const stations = [...new Set([...heardStations(), ...loggedContacts()])].filter(call => call !== me).slice(0, 12);
   sendButton.onclick = async () => {
     sendButton.disabled = true;
     try {
-      await api('qsl_send', { post: { to: target, freq: freqText() } });
+      await api('qsl_send', { post: { to: target } });
       status.textContent = `Sent to ${target}`;
       checkAwards();
     } catch (error) {
@@ -115,7 +108,7 @@ function showSend() {
   body.replaceChildren(...[
     stations.length && h('div', { class: 'chips' }, stations.map(call =>
       h('button', { type: 'button', onclick: () => { input.value = call; redraw(); } }, call))),
-    h('div', { class: 'row' }, input, freqInput, h('small', {}, 'kHz'), sendButton),
+    h('div', { class: 'row' }, input, sendButton),
     preview,
     status,
   ].filter(Boolean));

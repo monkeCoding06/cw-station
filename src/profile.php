@@ -289,14 +289,9 @@ function qsl_card_row(array $row): array
 }
 
 /** Stores a snapshot of the sender's saved design. Later edits to the design do not change it. */
-function send_qsl(string $from, string $to, mixed $freq): array
+function send_qsl(string $from, string $to): array
 {
-    $pdo = db();
-    if (!is_string($freq) || preg_match('/^\d{1,5}(\.\d{1,3})?$/D', $freq) !== 1 || (float) $freq < 100 || (float) $freq > 60000) {
-        throw new ApiError(400, 'Enter a frequency in kHz');
-    }
-    $freq = number_format((float) $freq, 3, '.', '');
-    if (preg_match(CALLSIGN_PATTERN, $to) !== 1 || $to === $from) {
+    $pdo = db();    if (preg_match(CALLSIGN_PATTERN, $to) !== 1 || $to === $from) {
         throw new ApiError(400, 'Choose another station');
     }
     if (find_account($from) === null) {
@@ -320,7 +315,7 @@ function send_qsl(string $from, string $to, mixed $freq): array
     }
 
     $design = load_qsl_design($from) ?? default_qsl_design();
-    $card = ['from' => $from, 'to' => $to, 'date' => gmdate('Y-m-d', $now), 'freq' => $freq, 'design' => $design];
+    $card = ['from' => $from, 'to' => $to, 'date' => gmdate('Y-m-d', $now), 'design' => $design];
     $pdo->prepare('INSERT INTO qsl_cards (from_call, to_call, sent_at, image_hash, card) VALUES (?, ?, ?, ?, ?)')
         ->execute([$from, $to, $now, $design['image'], json_encode($card, JSON_THROW_ON_ERROR)]);
     return ['id' => (int) $pdo->lastInsertId(), 'card' => $card];
