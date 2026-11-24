@@ -3,8 +3,50 @@ import { $, api } from './util.js';
 let callsign, view, timer;
 let ready = false;
 let sending = false;
+const PING_KEY = 'cw-chat-ping';
+let pingOn = false;
+let pingContext = null;
 const request = (action, id, extra = {}, keepalive = false) =>
   api('chat_' + action, {post: {view: id, ...extra}, keepalive});
+
+function ping() {
+  if (!pingOn || !pingContext) return;
+  pingContext.resume?.();
+  const now = pingContext.currentTime;
+  [880, 1320].forEach((hz, i) => {
+    const osc = pingContext.createOscillator();
+    const gain = pingContext.createGain();
+    osc.frequency.value = hz;
+    gain.gain.setValueAtTime(0, now + i * .09);
+    gain.gain.linearRampToValueAtTime(.15, now + i * .09 + .01);
+    gain.gain.exponentialRampToValueAtTime(.001, now + i * .09 + .25);
+    osc.connect(gain).connect(pingContext.destination);
+    osc.start(now + i * .09);
+    osc.stop(now + i * .09 + .26);
+  });
+}
+
+function initPingToggle() {
+  const button = $('chatPing');
+  try { pingOn = localStorage.getItem(PING_KEY) === '1'; } catch {}
+  const show = () => {
+    button.setAttribute('aria-pressed', String(pingOn));
+    button.textContent = pingOn ? 'Ping on' : 'Ping off';
+  };
+  button.onclick = () => {
+    pingOn = !pingOn;
+    try { localStorage.setItem(PING_KEY, pingOn ? '1' : '0'); } catch {}
+    if (pingOn) {
+      pingContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      ping();
+    }
+    show();
+  };
+  document.addEventListener('pointerdown', () => {
+    if (pingOn) pingContext ||= new (window.AudioContext || window.webkitAudioContext)();
+  }, {once: true});
+  show();
+}
 
 function controls() {
   $('chatText').disabled = !ready;
@@ -13,6 +55,7 @@ function controls() {
 
 export function initChat(call) {
   callsign = call;
+  initPingToggle();
   $('chatForm').addEventListener('submit', async event => {
     event.preventDefault();
     const input = $('chatText');
@@ -82,6 +125,7 @@ async function poll(id) {
       log.append(item);
     }
     while (log.children.length > 50) log.firstChild.remove();
+    if (messages.some(message => message.call !== callsign)) ping();
     if (stick) log.scrollTop = log.scrollHeight;
   } catch (error) {
     if (view !== id) return;

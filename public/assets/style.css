@@ -478,6 +478,13 @@ body.tx #signal { color: var(--accent); }
 #onlineList .me { color: var(--accent); }
 
 #onlinePanel .chat-title { margin-top: .8rem; }
+#chatPing {
+  float: right; padding: .05rem .5rem; background: none; cursor: pointer;
+  border: 1px solid var(--panel-edge); border-radius: 3px;
+  color: var(--print-dim); font: 600 .62rem/1.4 "Segoe UI", system-ui, sans-serif;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+#chatPing[aria-pressed=true] { color: #1a1408; background: var(--accent); border-color: var(--accent); }
 #chatLog { margin: 0 0 .4rem; padding: 0; list-style: none; height: 7rem; overflow-y: auto; font-size: .8rem; overflow-wrap: anywhere; }
 #chatLog b, #chatLog .me { font-family: var(--mono); color: var(--print-dim); }
 #chatLog b.me { color: var(--accent); }
