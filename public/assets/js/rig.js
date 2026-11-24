@@ -25,7 +25,12 @@ export const listeners = { power: null, active: null, reset: null };
 export { SPAN_HZ, BAND_MIN, BAND_MAX };
 
 export const tuneOffset = () => +$('vfo').value;
+export const tunedKHz = () => ((BAND_START_HZ + tuneOffset()) / 1000).toFixed(3);
 export const isPowered = () => powered;
+
+let rxLevel = 0;
+/** Simulated receive level, 0..1: band noise plus the keyed signals that get through the filter. */
+export const receiveLevel = () => rxLevel;
 
 /** Left edge of the waterfall, as an offset. It follows the VFO but never leaves the band. */
 export const windowStart = () => Math.min(BAND_MAX - SPAN_HZ, Math.max(BAND_MIN, tuneOffset() - SPAN_HZ / 2));
@@ -145,7 +150,13 @@ export function update(signals, active = []) {
     ifFilter.Q.setTargetAtTime(pitch / bandwidth, t, .012);
   }
 
-  if (!powered) return;
+  if (!powered) {
+    rxLevel = 0;
+    return;
+  }
+  const gain = Math.sqrt(rfGain);
+  const heard = signals.reduce((sum, s) => sum + s.amp * filterGain(s.offset - tuneOffset()), 0);
+  rxLevel = isKeyDown() ? 0 : Math.min(1, .05 * gain + .5 * heard * gain);
   waterfall.record(signals, {
     rfGain,
     listening: !isKeyDown(),

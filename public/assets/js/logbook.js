@@ -12,6 +12,9 @@ const MAX_GUEST_ENTRIES = 500;
 let entries = [];
 let claimed = false;
 
+/** Callsigns in the logbook, most recent first. */
+export const loggedContacts = () => [...new Set(entries.map(entry => entry.contact.toUpperCase()).filter(Boolean))];
+
 /* ---------- Storage ---------- */
 
 const serverStore = {

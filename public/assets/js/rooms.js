@@ -1,4 +1,6 @@
 import { $, api } from './util.js';
+import { noteHeard } from './contacts.js';
+import { openCallMenu } from './rigview.js';
 import { audioContext, marksToRuns, playRuns, receiveLatencyMs, stopAllVoices } from './audio.js';
 import { hooks } from './keyer.js';
 import { createTransmitter } from './transmit.js';
@@ -72,6 +74,7 @@ export function leaveRoom() {
 
 /** Plays a transmission after the receive latency. */
 function receive(call, transmission, extraDelayMs = 0) {
+  if (room === 'general') noteHeard(call);
   const now = performance.now();
   const earliest = now + receiveLatencyMs() + extraDelayMs;
   if (room === 'general' && (playbackEnd.get(call) || 0) > earliest + 4000) return;
@@ -142,12 +145,30 @@ async function sendToServer(transmission) {
 
 const ACTIVITY_LABELS = { general: 'on air', echo: 'echo', practice: 'practice', training: 'training' };
 
+let onlineSignature = '';
+
 export function showOnline(stations) {
+  const signature = JSON.stringify(stations);
+  if (signature === onlineSignature) return;
+  onlineSignature = signature;
+  const list = $('onlineList');
+  const focused = list.contains(document.activeElement) ? document.activeElement.dataset.call : null;
+
   $('onlineCount').textContent = stations.length;
-  $('onlineList').replaceChildren(...stations.map(({ call, listening, activity }) => {
+  list.replaceChildren(...stations.map(({ call, listening, activity }) => {
     const item = document.createElement('li');
-    item.textContent = call;
-    if (call === me) item.className = 'me';
+    if (call === me) {
+      item.textContent = call;
+      item.className = 'me';
+    } else {
+      const name = document.createElement('button');
+      name.type = 'button';
+      name.className = 'call';
+      name.textContent = call;
+      name.dataset.call = call;
+      name.onclick = () => openCallMenu(call, name);
+      item.append(name);
+    }
     const state = listening ? 'listening' : activity;
     const label = listening ? 'just receiving' : ACTIVITY_LABELS[activity];
     if (label) {
@@ -159,6 +180,7 @@ export function showOnline(stations) {
     }
     return item;
   }));
+  if (focused) list.querySelector(`[data-call="${CSS.escape(focused)}"]`)?.focus();
 }
 
 async function poll(mine) {

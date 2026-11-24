@@ -9,6 +9,9 @@
   --lcd-on: #a7d35a;
   --lcd-ink: #1f2b0a;
   --lcd-off: #2a3320;
+  --lcd-dim: #364425;
+  --lcd-glow: rgba(167, 211, 90, .25);
+  --lcd-shade: rgba(40, 70, 0, .35);
   --paper: #efe9d6;
   --rule: #b9c4d6;
   --margin: #d98a82;
@@ -168,10 +171,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 .unit {
   position: relative;
   padding: 1.4rem 1.3rem 1.2rem;
-  background: linear-gradient(#171716, #0f0f0f);
-  border: 1px solid #000;
+  background: var(--face-bg, linear-gradient(#171716, #0f0f0f));
+  border: 1px solid var(--face-line, #000);
   border-radius: 8px;
-  box-shadow: inset 0 1px 0 #333, 0 8px 18px rgba(0, 0, 0, .5);
+  box-shadow: inset 0 1px 0 var(--face-hi, #333), 0 8px 18px rgba(0, 0, 0, .5);
 }
 .screw {
   position: absolute;
@@ -207,6 +210,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 .rig-top { display: flex; gap: 1rem; align-items: stretch; }
 
 .window {
+  --print: #d9d4c5;
+  --print-dim: #8f8a7c;
   flex: 1;
   min-width: 0;
   padding: .5rem;
@@ -219,7 +224,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
   position: relative;
   padding: .5rem .7rem;
   background: var(--lcd-off);
-  color: #364425;
+  color: var(--lcd-dim);
   border-radius: 2px;
   font-family: var(--mono);
   overflow: hidden;
@@ -235,12 +240,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
     linear-gradient(var(--lcd-off) 1px, transparent 1px) 0 0 / 3px 3px;
   opacity: .55;
 }
-body.rx-on .lcd {
+body.rx-on .lcd, .lcd.lit {
   background: var(--lcd-on);
   color: var(--lcd-ink);
-  box-shadow: inset 0 0 14px rgba(40, 70, 0, .35), 0 0 12px rgba(167, 211, 90, .25);
+  box-shadow: inset 0 0 14px var(--lcd-shade), 0 0 12px var(--lcd-glow);
 }
-body.rx-on .lcd::after {
+body.rx-on .lcd::after, .lcd.lit::after {
   background:
     linear-gradient(90deg, var(--lcd-on) 1px, transparent 1px) 0 0 / 3px 3px,
     linear-gradient(var(--lcd-on) 1px, transparent 1px) 0 0 / 3px 3px;
@@ -376,6 +381,7 @@ body.rx-on #cursor { opacity: .85; }
     radial-gradient(circle at 50% 50%, #222 0 55%, transparent 56%),
     repeating-conic-gradient(#050505 0 4deg, #343433 4deg 8deg);
   pointer-events: none;
+  transition: transform 80ms ease-out;
 }
 .knob-dial::after {
   content: "";
@@ -384,8 +390,30 @@ body.rx-on #cursor { opacity: .85; }
   width: 3px; height: 24%;
   margin-left: -1.5px;
   border-radius: 1px;
-  background: var(--print);
+  background: var(--knob-mark, var(--print));
 }
+/* the big knobs also carry a finger dimple, and a fixed tick ring to read the turn against */
+.knob-xl .knob-dial::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 30%;
+  width: 15%; aspect-ratio: 1;
+  margin-left: -7.5%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 70%, rgba(255, 255, 255, .28), rgba(0, 0, 0, .55) 70%);
+  box-shadow: inset 0 1px 2px #000c, 0 1px 0 rgba(255, 255, 255, .25);
+}
+.knob-xl::before {
+  content: "";
+  position: absolute;
+  inset: -8%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(var(--tick, #8f8a7c) 0 1.2deg, transparent 1.2deg 12deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 82%, #000 83%);
+  mask: radial-gradient(circle, transparent 0 82%, #000 83%);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .knob-dial { transition: none; } }
 
 /* ---------- Keyer ---------- */
 
@@ -399,7 +427,7 @@ body.rx-on #cursor { opacity: .85; }
   background: var(--lcd-on);
   color: var(--lcd-ink);
   border-radius: 2px;
-  box-shadow: inset 0 0 12px rgba(40, 70, 0, .35);
+  box-shadow: inset 0 0 12px var(--lcd-shade);
   font: 1.05rem/1.4 var(--mono);
   white-space: pre-wrap;
   word-break: break-all;
@@ -417,13 +445,13 @@ body.tx #signal { color: var(--accent); }
   text-transform: uppercase;
 }
 
-#pad {
+.pad {
   display: flex;
   gap: .6rem;
   height: 5.5rem;
   margin: .9rem 0;
 }
-#pad button {
+.pad > * {
   flex: 1;
   min-width: 0;
   background: linear-gradient(#262625, #141413);
@@ -440,8 +468,8 @@ body.tx #signal { color: var(--accent); }
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
-#pad button.held { background: #2f2a1c; color: var(--accent); box-shadow: inset 0 2px 6px #000; }
-@media (pointer: coarse) { #pad { height: 8rem; } }
+.pad > .held { background: #2f2a1c; color: var(--accent); box-shadow: inset 0 2px 6px #000; }
+@media (pointer: coarse) { .pad { height: 8rem; } }
 
 .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .8rem; }
 .settings label { display: grid; gap: .35rem; }
@@ -494,13 +522,6 @@ body.tx #signal { color: var(--accent); }
 
 /* ---------- Training (reuses the rig panel) ---------- */
 
-#trainLcd.lit { background: var(--lcd-on); color: var(--lcd-ink); box-shadow: inset 0 0 14px rgba(40, 70, 0, .35), 0 0 12px rgba(167, 211, 90, .25); }
-#trainLcd.lit::after {
-  background:
-    linear-gradient(90deg, var(--lcd-on) 1px, transparent 1px) 0 0 / 3px 3px,
-    linear-gradient(var(--lcd-on) 1px, transparent 1px) 0 0 / 3px 3px;
-  opacity: .6;
-}
 #trainLcd { text-align: center; }
 #trainChar { font-size: 4rem; font-weight: 700; line-height: 1.1; }
 #trainMorse { font-size: 2.4rem; letter-spacing: .1em; line-height: 1.1; }
@@ -586,7 +607,7 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
   #power[aria-pressed=true]::after { top: 50%; left: .1rem; }
   .scale { font-size: .7rem; }
   .scale .t25, .scale .t75 { display: none; }
-  #dial { font-size: 1.7rem; }
+  #dial { font-size: clamp(1.45rem, 8vw, 1.9rem); white-space: nowrap; }
   .scope { height: 120px; }
   .knobs { flex-wrap: wrap; justify-content: space-around; gap: 1rem .6rem; }
   .knob-sm { width: 3.4rem; height: 3.4rem; }
@@ -595,6 +616,8 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
   .tools button { flex: 1; }
   .settings { grid-template-columns: 1fr 1fr; }
   .top { padding: .5rem .6rem; }
+  .who { flex-wrap: wrap; }
+  .who button, .who .report { min-height: 2.5rem; display: inline-flex; align-items: center; }
 }
 
 /* ---------- Desktop: the whole station fits one viewport ---------- */
@@ -625,7 +648,7 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
   /* middle: rig above keyer */
   .bench { display: flex; flex-direction: column; gap: .7rem; height: 100%; min-height: 0; }
   .unit { padding: clamp(.7rem, 2vh, 1.3rem) 1.3rem; }
-  .rig { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; gap: .6rem 1rem; }
+  .rig { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: .6rem 1rem; }
   .keyer { flex: none; }
 
   .rig-top { display: contents; }
@@ -639,7 +662,8 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
   #power[aria-pressed=true]::after { top: .1rem; }
   .tools { grid-column: 2; grid-row: 2; flex-direction: column; justify-content: flex-start; align-self: start; margin: 0; gap: .4rem; }
   .tools button { min-width: 0; width: 4rem; min-height: 2.1rem; padding: .2rem 0; }
-  .knobs { grid-column: 1 / -1; grid-row: 3; margin: 0; }
+  .strip { grid-column: 1 / -1; grid-row: 3; margin: 0; }
+  .knobs { grid-column: 1 / -1; grid-row: 4; margin: 0; }
   .knob-sm { width: clamp(2.4rem, 6.5vh, 3.2rem); height: clamp(2.4rem, 6.5vh, 3.2rem); }
   .knob-lg { width: clamp(3.2rem, 9.5vh, 5rem); height: clamp(3.2rem, 9.5vh, 5rem); }
   .knob-xl { width: clamp(3.8rem, 12vh, 6.4rem); height: clamp(3.8rem, 12vh, 6.4rem); }
@@ -655,5 +679,199 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
   #onlineList { flex: 1 1 3rem; min-height: 0; max-height: none; align-content: flex-start; }
   #chatLog { flex: 1 1 5rem; height: auto; min-height: 4rem; }
   .side details { grid-row: 2; max-height: 40vh; overflow: auto; }
+}
+
+/* ---------- Rig appearance ---------- */
+/* Looks are chosen with data-* attributes on .bench (live) and .rigview (preview of someone else's rig). */
+
+:is(.bench, .rigview) {
+  --knob-mark: #d9d4c5;
+  --tick: #8f8a7c;
+  --meter-face: #0d0d0c; --meter-lit-face: #3b2a12; --meter-ink: #d9d4c5; --meter-needle: #ff8a3d; --meter-glow: #ffb15a;
+  --plate-bg: linear-gradient(#2b2b2b, #0c0c0c);
+}
+
+:is(.bench, .rigview)[data-face=brushed] {
+  --face-bg:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0) 0 2px, rgba(255, 255, 255, .14) 2px 3px, rgba(0, 0, 0, .06) 3px 4px),
+    linear-gradient(#d9dbdd, #aeb1b4 55%, #c6c8ca);
+  --face-line: #6b6e71; --face-hi: #f4f5f6; --tick: #3a3a39;
+}
+:is(.bench, .rigview)[data-face=brushed] .unit { --print: #1c1c1b; --print-dim: #4b4a45; }
+:is(.bench, .rigview)[data-face=brushed] #clearDecoder { color: var(--print); border-color: var(--print-dim); }
+:is(.bench, .rigview)[data-face=charcoal] { --face-bg: linear-gradient(#383b3e, #25272a); --face-line: #0b0b0c; --face-hi: #5a5e62; }
+:is(.bench, .rigview)[data-face=vintage] {
+  --wood: 1.6rem;
+  --face-bg:
+    linear-gradient(90deg, #6e4525 0, #4a2c14 calc(var(--wood) - .1rem), #120c06 var(--wood), transparent var(--wood),
+      transparent calc(100% - var(--wood)), #120c06 calc(100% - var(--wood)), #4a2c14 calc(100% - var(--wood) + .1rem), #6e4525 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0) 0 5px, rgba(0, 0, 0, .09) 5px 6px),
+    linear-gradient(#34312b, #1f1d19);
+  --face-line: #0b0805; --face-hi: #7a4d2a;
+  --plate-bg: linear-gradient(#7a2a20, #471410);
+}
+:is(.bench, .rigview)[data-face=vintage] .unit { padding-left: calc(var(--wood) + .8rem); padding-right: calc(var(--wood) + .8rem); }
+:is(.bench, .rigview)[data-face=vintage] .screw.tl, :is(.bench, .rigview)[data-face=vintage] .screw.bl { left: calc(var(--wood) + 8px); }
+:is(.bench, .rigview)[data-face=vintage] .screw.tr, :is(.bench, .rigview)[data-face=vintage] .screw.br { right: calc(var(--wood) + 8px); }
+
+:is(.bench, .rigview)[data-dial=amber] { --lcd-on: #f0a830; --lcd-ink: #3a1f00; --lcd-off: #33260f; --lcd-dim: #5a4217; --lcd-glow: rgba(240, 168, 48, .32); --lcd-shade: rgba(110, 50, 0, .4); }
+:is(.bench, .rigview)[data-dial=ice] { --lcd-on: #8fd8e8; --lcd-ink: #062a33; --lcd-off: #14292f; --lcd-dim: #2f5560; --lcd-glow: rgba(143, 216, 232, .3); --lcd-shade: rgba(0, 60, 80, .4); }
+
+:is(.bench, .rigview)[data-knob=black-silver] .knob-dial {
+  background:
+    radial-gradient(circle, #151515 0 72%, transparent 73%),
+    conic-gradient(#f0f0f0, #8d8d8d, #fafafa, #767676, #f0f0f0);
+}
+:is(.bench, .rigview)[data-knob=bakelite] .knob-dial {
+  background: radial-gradient(circle at 35% 28%, #7a4421, #3a1c0a 70%, #1c0d05);
+  box-shadow: inset 0 0 0 2px #0006;
+}
+:is(.bench, .rigview)[data-knob=chrome] .knob-dial {
+  background: conic-gradient(#f4f4f4, #8a8a8a, #fcfcfc, #6c6c6c, #f4f4f4);
+  box-shadow: inset 0 0 0 2px #0004;
+}
+:is(.bench, .rigview)[data-knob=chrome] { --knob-mark: #1a1a1a; }
+
+/* meter */
+:is(.bench, .rigview)[data-meter=cream] { --meter-face: #e6dcbf; --meter-lit-face: #fbefc6; --meter-ink: #2b2417; --meter-needle: #b3261e; --meter-glow: #ffcf7a; }
+:is(.bench, .rigview)[data-meter=amber] { --meter-face: #3a2608; --meter-lit-face: #7a4d0f; --meter-ink: #ffcf6b; --meter-needle: #fff1c8; --meter-glow: #ffa31f; }
+:is(.bench, .rigview)[data-backlight=true] { --meter-face: var(--meter-lit-face); }
+
+.strip { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .7rem; }
+.plate {
+  max-width: 55%;
+  padding: .2rem .7rem;
+  background: var(--plate-bg);
+  border: 1px solid #000;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px rgba(0, 0, 0, .6);
+  color: #f6f3ea;
+  font: 700 .95rem/1.3 var(--mono);
+  letter-spacing: .16em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plate span { text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(255, 255, 255, .35); }
+.meter { width: 6.2rem; height: 3.5rem; flex: none; transition: filter .3s; }
+:is(.bench, .rigview)[data-backlight=true] .meter { filter: drop-shadow(0 0 .35rem var(--meter-glow)); }
+.m-face { fill: var(--meter-face); stroke: #000; stroke-width: 1.5; transition: fill .3s; }
+.m-tick { stroke: var(--meter-ink); stroke-width: .7; }
+.m-tick.major { stroke-width: 1.5; }
+.m-needle { stroke: var(--meter-needle); stroke-width: 1.2; stroke-linecap: round; }
+.m-hub { fill: #1b1b1a; }
+.m-text { fill: var(--meter-ink); font: 700 7px var(--mono); }
+
+/* tape captions */
+.tapes { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.tape {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+  padding: .05rem .5rem;
+  background: #e9dfb8;
+  color: #1f2d6b;
+  border-radius: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+  font: .85rem/1.3 "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  white-space: nowrap;
+  user-select: none;
+  touch-action: none;
+}
+[data-editing=true] .tape { pointer-events: auto; cursor: grab; outline: 1px dashed rgba(0, 0, 0, .55); outline-offset: 2px; }
+.tape.moving { cursor: grabbing; }
+
+/* ---------- Panels: editor, call menu, rig preview, QSL ---------- */
+
+.sheet {
+  position: fixed; right: 1rem; top: 4.2rem; z-index: 30;
+  display: grid; gap: .6rem;
+  width: 19rem; max-height: calc(100dvh - 5.5rem); overflow: auto;
+  padding: .8rem;
+  background: #171716; border: 1px solid var(--panel-edge); border-radius: 6px;
+  box-shadow: 0 .6rem 1.6rem rgba(0, 0, 0, .65);
+}
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.sheet fieldset, .dialog fieldset { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.sheet legend, .dialog legend { width: 100%; padding: 0; margin-bottom: .2rem; font: var(--legend); letter-spacing: .12em; text-transform: uppercase; }
+.sheet button, .dialog button, .menu button {
+  background: none; border: 1px solid var(--panel-edge); border-radius: 3px;
+  padding: .35rem .7rem; color: var(--print-dim);
+}
+.sheet button:hover, .dialog button:hover, .menu button:hover { color: var(--print); }
+.sheet .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: #1a1408; font-weight: 600; }
+.sheet .primary:disabled, .dialog .primary:disabled { opacity: .45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.row input[type=text] { flex: 1; min-width: 0; }
+.row input.freq { flex: 0 0 6.5rem; text-align: right; }
+.sheet small, .dialog small { color: var(--print-dim); }
+.chip { position: relative; }
+.chip input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.chip span { display: block; padding: .3rem .6rem; border: 1px solid var(--panel-edge); border-radius: 3px; color: var(--print-dim); font-size: .8rem; text-transform: capitalize; }
+.chip input:checked + span { border-color: var(--accent); color: var(--print); }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.tape-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; width: 100%; }
+.tape-inputs input { min-width: 0; font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; }
+
+.overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: .8rem; background: rgba(0, 0, 0, .72); }
+.dialog {
+  display: grid; gap: .7rem; align-content: start;
+  width: min(30rem, 100%); max-height: 92dvh; overflow: auto; padding: .8rem;
+  background: #171716; border: 1px solid var(--panel-edge); border-radius: 6px;
+}
+.tabs { display: flex; gap: .25rem; }
+.tabs button[aria-pressed=true] { color: var(--print); border-color: var(--accent); }
+.menu {
+  position: fixed; z-index: 50; display: grid; padding: .2rem;
+  background: #171716; border: 1px solid var(--panel-edge); border-radius: 4px; box-shadow: 0 .4rem 1rem rgba(0, 0, 0, .6);
+}
+.menu button { border: 0; text-align: left; min-height: 2.2rem; }
+
+#onlineList .call { padding: 0; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: .2em; }
+#qslBadge { padding: 0 .35rem; background: var(--accent); border-radius: 999px; color: #1a1408; font-size: .7rem; }
+
+.rigview .unit { padding-top: 1rem; }
+.rigview .tapes { z-index: 3; }
+.mini-dial { font-size: 1.6rem; font-weight: 700; letter-spacing: .06em; line-height: 1.2; }
+.mini-row { display: flex; align-items: center; gap: 1rem; margin-top: .7rem; }
+.mini-row .pad { flex: 1; height: 4.5rem; margin: 0; }
+
+.qsl { position: relative; width: 100%; max-width: 24rem; aspect-ratio: 3 / 2; overflow: hidden; border-radius: 4px; background: var(--q-bg); color: var(--q-ink); font-family: var(--mono); }
+.qsl img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.q-shade { position: absolute; inset: 0; background: var(--q-bg); }
+.q-text { position: relative; display: grid; gap: .15rem; align-content: center; justify-items: start; height: 100%; padding: 1rem 1.4rem; }
+.q-tag { color: var(--q-accent); font-weight: 700; letter-spacing: .3em; }
+.q-text strong { font-size: 1.7rem; letter-spacing: .08em; }
+.q-text em { margin-top: .3rem; color: var(--q-accent); font-style: normal; font-size: .85rem; overflow-wrap: anywhere; }
+.qsl[data-style=border]::after { content: ""; position: absolute; inset: .5rem; border: 2px solid var(--q-accent); pointer-events: none; }
+.qsl[data-style=stripe]::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: .8rem; background: var(--q-accent); }
+.qsl-body { display: grid; gap: .7rem; }
+.received { display: grid; gap: .3rem; justify-items: start; }
+.chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.color { display: flex; align-items: center; gap: .4rem; font-size: .8rem; }
+input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; border: 1px solid var(--panel-edge); }
+
+@media (max-width: 600px) {
+  .sheet { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 48dvh; border-radius: 10px 10px 0 0; }
+  .chip span { padding: .55rem .8rem; }
+  .meter { width: 5.4rem; height: 3rem; }
+}
+
+/* Landscape phones: rig and keyer sit side by side so the pad stays reachable */
+@media (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
+  .station { grid-template-columns: minmax(0, 1fr); max-width: none; }
+  .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .bench > .keyer { grid-column: 2; grid-row: 1 / span 2; }
+  .bench > .rig { grid-column: 1; }
+  #onlinePanel { order: 2; }
+  .logbook { order: 3; }
+  .foot { order: 4; }
+  .side details { order: 5; }
+  .pad { height: max(5.5rem, 34vh); }
+  .sheet { left: auto; right: .5rem; top: .5rem; bottom: .5rem; width: 16rem; max-height: none; border-radius: 6px; }
+  .rig .window { padding: .3rem; }
+  #dial { font-size: 1.5rem; }
+  .scope { height: 80px; }
+  .knobs { margin-top: .6rem; }
 }
 

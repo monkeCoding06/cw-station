@@ -21,6 +21,8 @@ const MAX_MESSAGES_PER_MINUTE = 100;
 const KEEP_MESSAGES_PER_ROOM = 200;
 const ONLINE_WINDOW_SECONDS = 8;             // clients ping every 3 s
 
+require __DIR__ . '/profile.php';
+
 class ApiError extends RuntimeException
 {
     public function __construct(public readonly int $status, string $message)
@@ -96,6 +98,35 @@ function db(): PDO
         );
         CREATE INDEX IF NOT EXISTS messages_by_room ON messages (room, id);
         CREATE INDEX IF NOT EXISTS messages_by_user ON messages (callsign, created_at);
+        CREATE TABLE IF NOT EXISTS rig_profiles (
+            callsign   TEXT PRIMARY KEY,
+            config     TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS qsl_designs (
+            callsign   TEXT PRIMARY KEY,
+            design     TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS qsl_images (
+            owner      TEXT NOT NULL,
+            hash       TEXT NOT NULL,
+            ext        TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY (owner, hash)
+        );
+        CREATE INDEX IF NOT EXISTS qsl_images_by_hash ON qsl_images (hash);
+        CREATE TABLE IF NOT EXISTS qsl_cards (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            from_call  TEXT NOT NULL,
+            to_call    TEXT NOT NULL,
+            sent_at    INTEGER NOT NULL,
+            image_hash TEXT,
+            card       TEXT NOT NULL,
+            seen       INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS qsl_cards_to ON qsl_cards (to_call, id);
+        CREATE INDEX IF NOT EXISTS qsl_cards_from ON qsl_cards (from_call, sent_at);
     ');
 
     // logged_at 0 marks text that was written before entries were timestamped

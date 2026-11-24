@@ -180,6 +180,8 @@ export function stopKeyer() {
   heldPaddles = pressedKeys = mouseButtons = queuedElement = squeezeRelease = lastElement = 0;
   tracking = squeezing = false;
   touches.clear();
+  $('padDit').classList.remove('held');
+  $('padDah').classList.remove('held');
   setKey(false);
 }
 

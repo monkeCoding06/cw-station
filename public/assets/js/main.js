@@ -58,12 +58,12 @@ const PING_INTERVAL_MS = 3000;
 const LISTEN_KEY = 'cw-just-receiving';
 
 /** Keeps us on the online list in every room, and takes us off it when the page closes. */
-function startPresence(showOnline) {
+function startPresence(onPing) {
   const button = $('listen');
   let listening = localStorage.getItem(LISTEN_KEY) === '1';
   let activity;
 
-  const ping = () => api('ping', { post: { listening, activity } }).then(data => showOnline(data.online)).catch(error => {
+  const ping = () => api('ping', { post: { listening, activity } }).then(onPing).catch(error => {
     if (error.status === 401) location.reload();
   });
   const show = () => button.setAttribute('aria-pressed', String(listening));
@@ -110,7 +110,7 @@ async function startApp(callsign) {
   chat.initChat(callsign);
 
   // loaded only when signed in: these modules expect the app's elements to exist
-  const [{ renderReference }, audio, keyer, rooms, rig, scan, training] = await Promise.all([
+  const [{ renderReference }, audio, keyer, rooms, rig, scan, training, rigStyle, faceplate, rigEditor, rigView, qsl] = await Promise.all([
     import('./morse.js'),
     import('./audio.js'),
     import('./keyer.js'),
@@ -118,6 +118,11 @@ async function startApp(callsign) {
     import('./rig.js'),
     import('./scan.js'),
     import('./training.js'),
+    import('./rigstyle.js'),
+    import('./faceplate.js'),
+    import('./rigeditor.js'),
+    import('./rigview.js'),
+    import('./qsl.js'),
   ]);
 
   $('logout').onclick = async () => {
@@ -125,7 +130,10 @@ async function startApp(callsign) {
     location.reload();
   };
 
-  const setActivity = startPresence(rooms.showOnline);
+  const setActivity = startPresence(data => {
+    rooms.showOnline(data.online);
+    qsl.setQslCount(data.qsl || 0);
+  });
   startClaim();
 
   loadSettings();
@@ -135,6 +143,11 @@ async function startApp(callsign) {
   scan.initScan();
   training.initTraining();
   initKnobs();
+  rigStyle.initRigStyle();
+  faceplate.initFaceplate();
+  rigEditor.initRigEditor();
+  rigView.initRigView();
+  qsl.initQsl();
   initLogbook(document.body.dataset.claimed === '1', callsign);
   keyer.initKeyer();
   $('clearDecoder').onclick = keyer.clearMonitor;

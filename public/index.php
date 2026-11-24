@@ -9,6 +9,8 @@ header('Cache-Control: no-store');
 $user = current_user();
 $account = $user === null ? null : find_account($user);
 $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$rig = $account === null ? null : load_rig($user);
+$rigAttrs = rig_attributes($rig ?? default_rig());
 ?>
 <!doctype html>
 <html lang="en">
@@ -20,7 +22,7 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
 <script type="module" src="assets/js/main.js"></script>
 </head>
 
-<body data-user="<?= $h($user ?? '') ?>" data-claimed="<?= $account === null ? '0' : '1' ?>">
+<body data-user="<?= $h($user ?? '') ?>" data-claimed="<?= $account === null ? '0' : '1' ?>" data-rig="<?= $h($rig === null ? '' : json_encode($rig)) ?>">
 <?php if ($user === null): ?>
 <main class="login">
   <h1>CW Station</h1>
@@ -48,6 +50,8 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
 <?php if ($account === null): ?>
     <button id="claim">Claim</button>
 <?php endif; ?>
+    <button id="rigEdit" type="button" aria-expanded="false">Customize rig</button>
+    <button id="qslOpen" type="button">QSL <b id="qslBadge" hidden></b></button>
     <a class="report" href="https://github.com/monkeCoding06/cw-station/issues" target="_blank" rel="noopener noreferrer">Report bug</a>
     <button id="logout">Sign out</button>
   </div>
@@ -84,7 +88,7 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
     </div>
   </section>
 
-  <div class="bench">
+  <div class="bench" id="bench"<?= $rigAttrs ?>>
 
     <!-- Receiver -->
     <section class="unit rig" data-rooms="general echo practice" data-nokey>
@@ -113,6 +117,9 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
           <span class="legend">Off</span>
         </div>
       </div>
+
+      <div class="strip" data-strip></div>
+      <div class="tapes" data-tapes></div>
 
       <div class="knobs">
         <div class="knob-group">
@@ -173,6 +180,9 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
         </div>
       </div>
 
+      <div class="strip" data-strip></div>
+      <div class="tapes" data-tapes></div>
+
       <div class="knobs">
         <div class="knob-group">
           <span class="legend"><span id="trainSpeedLabel">Character speed</span> <output id="trainSpeedOut"></output></span>
@@ -203,7 +213,7 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
         </div>
       </div>
 
-      <div id="pad">
+      <div id="pad" class="pad">
         <button id="padDit" type="button"></button>
         <button id="padDah" type="button">Dah  −</button>
       </div>
@@ -253,6 +263,11 @@ $h = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBST
       <div class="ref" id="ref"></div>
     </details>
   </div>
+
+  <div id="rigEditor" class="sheet" data-nokey hidden></div>
+  <div id="rigView" class="overlay" data-nokey hidden></div>
+  <div id="qslPanel" class="overlay" data-nokey hidden></div>
+  <div id="callMenu" class="menu" data-nokey hidden></div>
 
   <footer class="foot" data-nokey>
     Made by OE2FOX with <3 · Heavily inspired by <a href="https://vailmorse.com" target="_blank" rel="noopener noreferrer">vailmorse.com</a> · <a href="https://github.com/monkeCoding06" target="_blank" rel="noopener noreferrer">GitHub</a>

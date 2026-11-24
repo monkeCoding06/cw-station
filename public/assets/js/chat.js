@@ -1,4 +1,5 @@
 import { $, api } from './util.js';
+import { noteHeard } from './contacts.js';
 
 let callsign, view, timer;
 let ready = false;
@@ -121,6 +122,7 @@ async function poll(id) {
       const who = document.createElement('b');
       who.textContent = message.call;
       if (message.call === callsign) who.className = 'me';
+      else noteHeard(message.call);
       item.append(who, ' ', message.text);
       log.append(item);
     }

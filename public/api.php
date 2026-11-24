@@ -20,7 +20,7 @@ function respond(array $data, int $status = 200): never
  * that header on cross-site requests without a CORS preflight (which we never
  * approve), so other websites cannot make a visitor's browser post here.
  */
-function read_post_body(): array
+function read_post_body(int $limit = MAX_BODY_BYTES): array
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new ApiError(405, 'POST required');
@@ -30,8 +30,8 @@ function read_post_body(): array
         throw new ApiError(400, 'Bad request');
     }
 
-    $raw = file_get_contents('php://input', false, null, 0, MAX_BODY_BYTES + 1);
-    if ($raw === false || strlen($raw) > MAX_BODY_BYTES) {
+    $raw = file_get_contents('php://input', false, null, 0, $limit + 1);
+    if ($raw === false || strlen($raw) > $limit) {
         throw new ApiError(413, 'Request too large');
     }
     $data = json_decode($raw, true);
@@ -106,10 +106,105 @@ function handle_logout(): never
 function handle_ping(): never
 {
     $body = read_post_body();
-    require_user();
+    $user = require_user();
     $activity = in_array($body['activity'] ?? null, ['general', 'echo', 'practice', 'training'], true) ? $body['activity'] : null;
     touch_session(($body['leave'] ?? false) === true ? 0 : time(), is_bool($body['listening'] ?? null) ? $body['listening'] : null, $activity);
-    respond(['online' => online_callsigns()]);
+    respond(['online' => online_callsigns(), 'qsl' => qsl_unseen_count($user)]);
+}
+
+/** Appearance of any operator's rig. Callsigns without a saved rig, and guests, get null (the default look). */
+function handle_rig_get(): never
+{
+    require_user();
+    $call = strtoupper(is_string($_GET['call'] ?? null) ? $_GET['call'] : '');
+    if (preg_match(CALLSIGN_PATTERN, $call) !== 1) {
+        throw new ApiError(400, 'Invalid callsign');
+    }
+    respond(['rig' => load_rig($call)]);
+}
+
+function handle_rig_save(): never
+{
+    $body = read_post_body();
+    $user = require_user();
+    require_account($user);
+    save_rig($user, validate_rig($body['rig'] ?? null));
+    respond(['ok' => true]);
+}
+
+function handle_qsl_design_get(): never
+{
+    $user = require_user();
+    $design = load_qsl_design($user);
+    respond(['design' => $design ?? default_qsl_design(), 'saved' => $design !== null]);
+}
+
+function handle_qsl_design_save(): never
+{
+    $body = read_post_body();
+    $user = require_user();
+    require_account($user);
+    $design = validate_qsl_design($body['design'] ?? null, $user);
+    save_qsl_design($user, $design);
+    respond(['design' => $design]);
+}
+
+function handle_qsl_image_upload(): never
+{
+    $body = read_post_body(262144);
+    $user = require_user();
+    require_account($user);
+    respond(['image' => store_qsl_image($user, is_string($body['data'] ?? null) ? $body['data'] : '')]);
+}
+
+function handle_qsl_image(): never
+{
+    $user = require_user();
+    $hash = is_string($_GET['id'] ?? null) ? $_GET['id'] : '';
+    $ext = preg_match('/^[a-f0-9]{64}$/D', $hash) === 1 ? qsl_image_for($user, $hash) : null;
+    $path = $ext === null ? '' : qsl_dir() . "/$hash.$ext";
+    if ($ext === null || !is_file($path)) {
+        throw new ApiError(404, 'No such image');
+    }
+    header('Content-Type: ' . ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][$ext]);
+    header('Cache-Control: private, max-age=31536000, immutable');
+    header('Content-Length: ' . filesize($path));
+    readfile($path);
+    exit;
+}
+
+function handle_qsl_send(): never
+{
+    $body = read_post_body();
+    $user = require_user();
+    $to = strtoupper(is_string($body['to'] ?? null) ? $body['to'] : '');
+    respond(send_qsl($user, $to, $body['freq'] ?? null));
+}
+
+function handle_qsl_inbox(): never
+{
+    $user = require_user();
+    respond(['cards' => qsl_inbox($user)]);
+}
+
+function handle_qsl_seen(): never
+{
+    read_post_body();
+    $user = require_user();
+    db()->prepare('UPDATE qsl_cards SET seen = 1 WHERE to_call = ?')->execute([$user]);
+    respond(['ok' => true]);
+}
+
+function handle_qsl_delete(): never
+{
+    $body = read_post_body();
+    $user = require_user();
+    $id = $body['id'] ?? null;
+    if (!is_int($id)) {
+        throw new ApiError(400, 'Invalid card');
+    }
+    db()->prepare('DELETE FROM qsl_cards WHERE id = ? AND to_call = ?')->execute([$id, $user]);
+    respond(['ok' => true]);
 }
 
 /** The server logbook belongs to claimed callsigns; guests keep theirs in the browser. */
@@ -238,6 +333,16 @@ try {
         'log_add' => handle_log_add(),
         'log_delete' => handle_log_delete(),
         'claim' => handle_claim(),
+        'rig_get' => handle_rig_get(),
+        'rig_save' => handle_rig_save(),
+        'qsl_design_get' => handle_qsl_design_get(),
+        'qsl_design_save' => handle_qsl_design_save(),
+        'qsl_image_upload' => handle_qsl_image_upload(),
+        'qsl_image' => handle_qsl_image(),
+        'qsl_send' => handle_qsl_send(),
+        'qsl_inbox' => handle_qsl_inbox(),
+        'qsl_seen' => handle_qsl_seen(),
+        'qsl_delete' => handle_qsl_delete(),
         'cw_join' => handle_live('cw', 'join'),
         'cw_poll' => handle_live('cw', 'poll'),
         'cw_send' => handle_live('cw', 'send'),
