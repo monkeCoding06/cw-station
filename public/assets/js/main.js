@@ -2,6 +2,7 @@ import { $, api } from './util.js';
 import { initLogbook, queueGuestUpload } from './logbook.js';
 import { initKnobs } from './knobs.js';
 import { initPrefixLookup } from './prefixes.js';
+import { applySharedLink, initShare } from './share.js';
 import { checkAwards, closeAwards, initAwardsTab } from './awards.js';
 import * as chat from './chat.js';
 
@@ -179,6 +180,7 @@ async function startApp(callsign) {
   qsl.initQsl();
   initLogbook(document.body.dataset.claimed === '1', callsign);
   initPrefixLookup();
+  initShare();
   keyer.initKeyer();
   $('clearDecoder').onclick = keyer.clearMonitor;
   audio.applySettings();
@@ -238,5 +240,6 @@ async function startApp(callsign) {
     };
   }
   switchRoom('general');
+  applySharedLink();
   chat.enterChat();
 }

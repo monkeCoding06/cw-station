@@ -23,7 +23,7 @@ let bus, noiseFilter, ifFilter;
 
 /** Other modules can watch the receiver: power(on), active(signals) every tick, reset() on a room change. */
 export const listeners = { power: null, active: null, reset: null };
-export { SPAN_HZ, BAND_MIN, BAND_MAX };
+export { SPAN_HZ, BAND_MIN, BAND_MAX, BAND_START_HZ };
 
 export const tuneOffset = () => +$('vfo').value;
 export const offsetKHz = offsetHz => ((BAND_START_HZ + offsetHz) / 1000).toFixed(3);

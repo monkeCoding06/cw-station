@@ -1088,15 +1088,23 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .bench { display: flex; flex-direction: column; gap: .4rem; }
   .unit { padding: .5rem .6rem; }
   .screw { display: none; }
-  .rig { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; gap: .3rem .5rem; }
-  .keyer { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: .35rem; }
+  .rig { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto auto; gap: .3rem .5rem; }
+  .rig.training.tune { flex: none; grid-template-rows: auto; }
+  .keyer { flex: none; min-height: 0; display: flex; flex-direction: column; gap: .35rem; }
+  .keyer.typing { flex: 1 1 0; }
+  .keyer.typing .notes-box { flex: 1; min-height: 0; padding: 0; }
+  .keyer.typing .notes-box label, .keyer.typing .notes-box textarea { height: 100%; }
+  .keyer.typing .notes-box label { display: flex; flex-direction: column; }
+  .keyer.typing .notes-box textarea { flex: 1; min-height: 0; resize: none; }
   .keyer .readout, .keyer .settings { flex: none; }
   .rig-top { display: contents; }
   .window { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; padding: .3rem; }
   .lcd { padding: .25rem .5rem; }
-  .scope { flex: none; height: 4.5rem; margin-top: .25rem; }
+  .scope { flex: 1 1 auto; height: auto; min-height: 4.5rem; margin-top: .25rem; }
   .scope canvas { position: absolute; inset: 0; }
   .scale, .lcd-line { display: none; }
+  .train-copy { max-height: 5rem; overflow: auto; font-size: .85rem; }
+  .type-box { padding: .3rem 0; }
   #dial { font-size: clamp(1.2rem, 6.5vw, 1.6rem); }
   #trainLcd .lcd-line { display: block; font-size: .62rem; }
   #trainPos { display: none; }
@@ -1126,7 +1134,7 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .readout { gap: .25rem; }
   .readout pre { height: 2.5rem; min-height: 0; max-height: none; padding: .25rem .5rem; font-size: .95rem; }
   #clearDecoder { padding: .05rem .6rem; }
-  .pad { flex: 1; height: auto; min-height: 1.8rem; margin: 0; }
+  .pad { flex: none; height: 3.4rem; margin: 0; }
   .settings { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: .3rem .6rem; }
   .settings label { gap: .15rem; }
   .settings select { padding: .15rem .3rem; }

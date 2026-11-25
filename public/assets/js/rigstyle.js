@@ -71,14 +71,49 @@ export function applyLook(element, rig) {
   element.dataset.backlight = String(rig.backlight);
 }
 
+/*
+ * Tape coordinates are stored against a reference layout: the display
+ * (LCD, waterfall) occupies the top REF_SPLIT percent of the rig and the
+ * knobs the rest. On screen that boundary is wherever the knobs actually
+ * start, so a tape placed over the waterfall stays over it on any screen.
+ */
+const REF_SPLIT = 60;
+const observed = new WeakSet();
+
+function measureSplit(container) {
+  const knobs = container.parentElement?.querySelector(':scope > .knobs');
+  const box = container.getBoundingClientRect();
+  if (!knobs || !knobs.offsetParent || !box.height) return container.style.removeProperty('--split');
+  const split = (knobs.getBoundingClientRect().top - box.top) / box.height * 100;
+  container.style.setProperty('--split', Math.min(90, Math.max(20, split)).toFixed(2) + '%');
+}
+
+const splitOf = container => parseFloat(container.style.getPropertyValue('--split')) || REF_SPLIT;
+
+function placeY(y) {
+  const s = 'var(--split, 60%)';
+  return y <= REF_SPLIT
+    ? `calc(${s} * ${y / REF_SPLIT})`
+    : `calc(${s} + (100% - ${s}) * ${(y - REF_SPLIT) / (100 - REF_SPLIT)})`;
+}
+
+const screenToStored = (y, split) => y <= split ? y / split * REF_SPLIT : REF_SPLIT + (y - split) / (100 - split) * (100 - REF_SPLIT);
+
 /** Draws the tape captions into a container. Editable ones can be dragged by the caller. */
 export function drawTapes(container, rig, onMove) {
+  if (!observed.has(container)) {
+    observed.add(container);
+    new ResizeObserver(() => measureSplit(container)).observe(container);
+  }
+  measureSplit(container);
   container.replaceChildren(...rig.tapes.map((tape, index) => {
     const label = document.createElement('span');
     label.className = 'tape';
     label.textContent = tape.t;
+    label.dataset.x = tape.x;
+    label.dataset.y = tape.y;
     label.style.left = tape.x + '%';
-    label.style.top = tape.y + '%';
+    label.style.top = placeY(tape.y);
     label.style.setProperty('--tilt', ((index * 37 % 7) - 3) * .6 + 'deg');
     if (onMove) {
       label.tabIndex = 0;
@@ -94,11 +129,13 @@ function makeMovable(label, container, index, onMove) {
   const set = (x, y) => {
     x = Math.min(100, Math.max(0, Math.round(x)));
     y = Math.min(100, Math.max(0, Math.round(y)));
+    label.dataset.x = x;
+    label.dataset.y = y;
     label.style.left = x + '%';
-    label.style.top = y + '%';
+    label.style.top = placeY(y);
     onMove(index, x, y);
   };
-  const position = () => [parseFloat(label.style.left), parseFloat(label.style.top)];
+  const position = () => [+label.dataset.x, +label.dataset.y];
 
   label.addEventListener('pointerdown', event => {
     event.preventDefault();
@@ -108,7 +145,8 @@ function makeMovable(label, container, index, onMove) {
   label.addEventListener('pointermove', event => {
     if (!label.hasPointerCapture(event.pointerId)) return;
     const rect = container.getBoundingClientRect();
-    set((event.clientX - rect.left) / rect.width * 100, (event.clientY - rect.top) / rect.height * 100);
+    const y = (event.clientY - rect.top) / rect.height * 100;
+    set((event.clientX - rect.left) / rect.width * 100, screenToStored(Math.min(100, Math.max(0, y)), splitOf(container)));
   });
   label.addEventListener('pointerup', () => label.classList.remove('moving'));
   label.addEventListener('keydown', event => {

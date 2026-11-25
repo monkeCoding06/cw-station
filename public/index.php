@@ -159,6 +159,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
 
       <div class="tools">
         <button id="scan" type="button" aria-pressed="false" data-rooms="general" disabled>Scan</button>
+        <button id="share" type="button" data-rooms="general" title="Copy a link to this frequency">Share</button>
         <button id="tuneStep" type="button" aria-pressed="false" title="Tuning step">100 Hz</button>
       </div>
     </section>
