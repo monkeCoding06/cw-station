@@ -513,6 +513,7 @@ body.tx #signal { color: var(--accent); }
   padding: .2rem .5rem;
   font-family: var(--mono);
 }
+.keymap button.active { border-color: var(--accent); color: var(--accent); }
 .settings input[type=range] { width: 100%; accent-color: var(--accent); }
 
 /* ---------- Online list ---------- */

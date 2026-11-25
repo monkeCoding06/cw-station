@@ -184,7 +184,7 @@ function updatePaddles(bits) {
 export function stopKeyer() {
   clearTimeout(keyerTimer);
   sending = false;
-  heldPaddles = pressedKeys = mouseButtons = queuedElement = squeezeRelease = lastElement = 0;
+  heldPaddles = pressedKeys = serialBits = mouseButtons = queuedElement = squeezeRelease = lastElement = 0;
   tracking = squeezing = false;
   touches.clear();
   $('padDit').classList.remove('held');
@@ -236,10 +236,11 @@ const NON_KEY_ELEMENTS = 'button,input,select,textarea,label,summary,details,can
 
 let mouseButtons = 0;
 let pressedKeys = 0;
+let serialBits = 0;         // paddles held on the USB serial keyer
 let tracking = false;       // a mouse press started on the key surface
 
 const refreshPaddles = () => {
-  const bits = mouseButtons | pressedKeys | touchBits();
+  const bits = mouseButtons | pressedKeys | serialBits | touchBits();
   $('padDit').classList.toggle('held', !!(bits & DIT));
   $('padDah').classList.toggle('held', !!(bits & DAH));
   updatePaddles(bits);
@@ -269,6 +270,66 @@ function initTouchKey() {
     button.addEventListener('pointercancel', release);
     button.addEventListener('lostpointercapture', release);
   }
+}
+
+/*
+ * USB paddle over Web Serial. The firmware sends 'a'/'A' for dit down/up and
+ * 'b'/'B' for dah down/up at 921600 baud.
+ */
+const SERIAL_BITS = { a: [DIT, true], A: [DIT, false], b: [DAH, true], B: [DAH, false] };
+let serialPort = null;
+
+async function readSerial(port) {
+  const reader = port.readable.getReader();
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!inputEnabled) continue;
+      let changed = false;
+      for (const byte of value) {
+        const entry = SERIAL_BITS[String.fromCharCode(byte)];
+        if (!entry) continue;
+        serialBits = entry[1] ? serialBits | entry[0] : serialBits & ~entry[0];
+        changed = true;
+      }
+      if (changed) refreshPaddles();
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function initSerialKey() {
+  const button = $('serialKey');
+  if (!('serial' in navigator)) return;
+  button.parentElement.hidden = false;
+
+  const disconnected = () => {
+    serialPort = null;
+    serialBits = 0;
+    button.classList.remove('active');
+    refreshPaddles();
+  };
+
+  button.onclick = async () => {
+    if (serialPort) {
+      const port = serialPort;
+      disconnected();
+      try { await port.close(); } catch {}
+      return;
+    }
+    try {
+      const port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 921600 });
+      serialPort = port;
+      enableAudio();
+      button.classList.add('active');
+      await readSerial(port);
+    } catch {}
+    if (serialPort) { try { await serialPort.close(); } catch {} }
+    disconnected();
+  };
 }
 
 /** True for the key pad and for empty page area, but not for other controls. */
@@ -341,6 +402,7 @@ export function initKeyer() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopKeyer(); });
 
   initKeyBindings();
+  initSerialKey();
   $('mode').onchange = onKeyerModeChange;
   onKeyerModeChange();
 }

@@ -272,6 +272,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
             <span class="legend">Keys</span>
             <span>Dit <button id="ditKey" type="button" title="Click, then press a key"></button></span>
             <span>Dah <button id="dahKey" type="button" title="Click, then press a key"></button></span>
+            <span data-serial hidden><button id="serialKey" type="button" title="Connect a serial paddle (ESP32 touch keyer)">USB paddle</button></span>
           </div>
           <label data-rooms="general echo"><span class="legend">Latency <output id="latencyOut"></output></span>
             <input type="range" id="latency" min="0" max="3000" step="50" value="0">
