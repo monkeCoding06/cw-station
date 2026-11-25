@@ -81,6 +81,11 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
         <button>Log it</button>
       </form>
       <p id="logStatus" role="status"><?= $account === null ? 'Guest logbook: kept in this browser until you claim.' : '' ?></p>
+      <div class="prefix">
+        <input id="prefixInput" type="text" maxlength="12" placeholder="Prefix lookup (oe2, ki7)" aria-label="Callsign prefix lookup"
+               autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <p id="prefixResult" role="status"></p>
+      </div>
     </div>
     <div class="page right">
       <input id="logSearch" type="search" placeholder="Search call or text" aria-label="Search logbook"
@@ -93,7 +98,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
   <div class="bench" id="bench"<?= $rigAttrs ?>>
 
     <!-- Receiver -->
-    <section class="unit rig" data-rooms="general echo practice" data-nokey>
+    <section class="unit rig" id="rxRig" data-rooms="general echo practice" data-nokey>
       <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
 
       <div class="rig-top">
@@ -179,9 +184,12 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
                 <option>Koch</option>
                 <option>Alphabetical</option>
                 <option>Single letters</option>
+                <option>Tune in</option>
               </select>
             </label>
-
+            <label id="trainFallLabel" class="train-fall" hidden>
+              <input type="checkbox" id="trainFall"> <span class="legend">Waterfall</span>
+            </label>
           </div>
         </div>
       </div>
@@ -190,7 +198,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
       <div class="tapes" data-tapes></div>
 
       <div class="knobs">
-        <div class="knob-group">
+        <div class="knob-group" id="trainSpeedGroup">
           <span class="legend"><span id="trainSpeedLabel">Character speed</span> <output id="trainSpeedOut"></output></span>
           <div class="knob knob-xl" data-for="trainSpeed" data-label="Character speed" data-unit="WPM" data-px="8"></div>
           <input id="trainSpeed" type="range" min="5" max="40" value="20" hidden>
@@ -221,6 +229,12 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
       <div class="type-box" data-nokey hidden>
         <label><span class="legend">Type the letter you heard</span>
           <input id="trainType" class="train-type" maxlength="2" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="?">
+        </label>
+      </div>
+
+      <div class="type-box notes-box" id="trainNotesBox" data-nokey hidden>
+        <label><span class="legend">Your notes</span>
+          <textarea id="trainNotes" rows="6" maxlength="1000" autocomplete="off" spellcheck="false" placeholder="Write down what you hear"></textarea>
         </label>
       </div>
 

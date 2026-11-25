@@ -120,8 +120,13 @@ function tick() {
     if (now >= entry.startAt && now <= entry.endAt) active.push({ offset: entry.freq });
     if (isKeyedAt(entry, now)) signals.push({ offset: entry.freq, amp: .8 });
   }
+  if (extraSignals) signals.push(...extraSignals());
   updateRig(signals, active);
 }
+
+/** Lets another source, such as the Tune in training band, put signals on the receiver each tick. */
+let extraSignals = null;
+export const setExtraSignals = fn => { extraSignals = fn; };
 
 /* ---------- Echo room ---------- */
 

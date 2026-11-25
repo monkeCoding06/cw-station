@@ -3,6 +3,8 @@ import { $ } from './util.js';
 import { countTrainCopy } from './awards.js';
 import { ALPHABET, PATTERNS, prettify, textToKeying, farnsworthTimeline, normalizeText } from './morse.js';
 import { enableAudio, keyingToRuns, playRuns, stopAllVoices } from './audio.js';
+import { setExtraSignals } from './rooms.js';
+import { sample, startBand, stopBand, STATION_COUNT } from './tunehunt.js';
 
 /*
  * Guided receive trainer.
@@ -16,6 +18,9 @@ import { enableAudio, keyingToRuns, playRuns, stopAllVoices } from './audio.js';
  *                 with ARRL/PARIS spacing (character speed + effective speed),
  *                 hidden from the screen. Copy it with the paddles, then
  *                 press Check copy.
+ *
+ *   Tune in       several simulated stations on different frequencies and
+ *                 speeds. Tune to them by ear and write notes; nothing is checked.
  */
 
 const SEQUENCES = {
@@ -46,6 +51,8 @@ let countTimers = [];
 
 const isFarnsworth = () => method === 'Farnsworth';
 const isListen = () => method === 'Single letters';
+const isTune = () => method === 'Tune in';
+const isTyping = () => isListen() || isTune();
 
 // Single letters: one random hidden letter at a time
 let target = '';
@@ -68,6 +75,7 @@ function cancelPlayback() {
   clearTimeout(litTimer);
   countTimers.forEach(clearTimeout);
   countTimers = [];
+  stopBand();
   stopAllVoices();
   $('trainLcd').classList.remove('lit', 'receiving');
 }
@@ -134,7 +142,18 @@ function copyListen(char) {
   }
 }
 
+/** Tune in borrows the receiver rig. Its waterfall is optional and off by default. */
+function showRig(on) {
+  const rig = $('rxRig');
+  rig.hidden = !on;
+  const fall = !on || $('trainFall').checked;
+  rig.querySelector('.scope').hidden = !fall;
+  rig.querySelector('.scale').hidden = !fall;
+  document.querySelector('.training').classList.toggle('tune', on);
+}
+
 function show(status) {
+  if (isTune()) { $('trainRestart').disabled = false; return; }
   if (isListen()) { showListen(status); return; }
   const done = sequence.length > 0 && !active();
   $('trainChar').textContent = done ? '✓' : active() ? current() : '–';
@@ -264,7 +283,13 @@ function begin() {
   index = 0;
   wrong = 0;
   clearMonitor();
-  setInputEnabled(!isListen());
+  setInputEnabled(!isTyping());
+  if (isTune()) {
+    startBand();
+    show();
+    $('trainNotes').focus();
+    return;
+  }
   if (isFarnsworth()) {
     known = START_KNOWN;
     exercise = '';
@@ -289,12 +314,18 @@ function chooseMethod(name) {
   method = name;
   sequence = SEQUENCES[name] ?? [];
   phase = 'idle';
-  setInputEnabled(!isListen());
+  setInputEnabled(!isTyping());
   setFarnsworthUi(isFarnsworth());
   $('trainType').closest('.type-box').hidden = !isListen();
-  document.querySelector('.keyer').classList.toggle('typing', isListen());
-  $('trainMorse').hidden = isFarnsworth() || isListen();
-  hooks.letter = isFarnsworth() ? () => {} : isListen() ? copyListen : copy;
+  $('trainNotesBox').hidden = !isTune();
+  $('trainFallLabel').hidden = !isTune();
+  showRig(isTune());
+  $('trainSpeedGroup').hidden = isTune();
+  $('trainReplay').hidden = isTune();
+  $('trainRestart').textContent = isTune() ? 'New band' : 'Restart';
+  document.querySelector('.keyer').classList.toggle('typing', isTyping());
+  $('trainMorse').hidden = isFarnsworth() || isTyping();
+  hooks.letter = isFarnsworth() || isTune() ? () => {} : isListen() ? copyListen : copy;
   // Farnsworth is answered at the learner's own sending speed
   setKeyingSpeed(isFarnsworth() ? undefined : () => 1200 / charWpm());
   if (isFarnsworth()) {
@@ -303,11 +334,14 @@ function chooseMethod(name) {
     $('trainSpeed').dispatchEvent(new Event('input'));
     $('trainEff').dispatchEvent(new Event('input'));
   }
+  if (isTune()) $('trainNotes').value = '';
   updateLabels();
   begin();
 }
 
 export function initTraining() {
+  setExtraSignals(sample);
+  $('trainFall').addEventListener('change', () => showRig(isTune()));
   $('trainMode').onchange = () => chooseMethod($('trainMode').value);
   $('trainReplay').onclick = () => {
     if (isListen()) { clearMonitor(); playTarget(); $('trainType').focus(); return; }
@@ -360,7 +394,15 @@ export function leaveTraining() {
   setKeyingSpeed();
   setInputEnabled(true);
   setFarnsworthUi(false);
+  $('trainNotesBox').hidden = true;
+  $('trainNotes').value = '';
   $('trainCopy').textContent = '';
+  $('trainFallLabel').hidden = true;
+  $('trainFall').checked = false;
+  showRig(false);
+  $('trainSpeedGroup').hidden = false;
+  $('trainReplay').hidden = false;
+  $('trainRestart').textContent = 'Restart';
   $('trainType').closest('.type-box').hidden = true;
   document.querySelector('.keyer').classList.remove('typing');
   clearMonitor();

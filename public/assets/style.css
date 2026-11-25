@@ -562,6 +562,11 @@ body.tx #signal { color: var(--accent); }
 .train-type { width: 7rem; display: block; margin-top: .3rem; text-align: center; text-transform: uppercase; font: inherit; font-size: 2rem; }
 .type-box { display: flex; justify-content: center; padding: 1rem 0; }
 .type-box label { display: grid; justify-items: center; gap: .3rem; }
+.notes-box label { width: 100%; }
+.train-fall:not([hidden]) { display: flex; align-items: center; gap: .4rem; align-self: end; }
+.training.tune > :is(.strip, .tapes, .knobs), .training.tune #trainLcd { display: none; }
+.training.tune .rig-top { margin: 0; }
+.notes-box textarea { width: 100%; resize: vertical; font: inherit; padding: .4rem; background: #fffdf4; color: #222; border: 1px solid #8a8571; border-radius: 3px; }
 .keyer.typing > :not(.type-box):not(.screw) { display: none !important; }
 #trainLcd.receiving #trainChar { animation: receiving 1.2s ease-in-out infinite; }
 @keyframes receiving { 50% { opacity: .45; } }
@@ -608,6 +613,9 @@ body.tx #signal { color: var(--accent); }
 .logbook form { display: grid; gap: .6rem; }
 .logbook form button { justify-self: start; background: var(--ink); color: var(--paper); }
 #logStatus { margin: 0; font-size: .8rem; color: #6a6657; min-height: 1.2em; }
+.prefix { margin-top: .8rem; display: grid; gap: .3rem; }
+.prefix input { width: 100%; }
+#prefixResult { margin: 0; font-size: .85rem; min-height: 1.2em; color: var(--ink); }
 #logCount { font-size: .75rem; color: #6a6657; }
 #logList { margin: 0; padding: 0; list-style: none; overflow-y: auto; max-height: 30rem; }
 #logList li { padding: .4rem 0; border-bottom: 1px solid var(--rule); }

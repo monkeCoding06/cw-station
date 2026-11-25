@@ -1,6 +1,7 @@
 import { $, api } from './util.js';
 import { initLogbook, queueGuestUpload } from './logbook.js';
 import { initKnobs } from './knobs.js';
+import { initPrefixLookup } from './prefixes.js';
 import { checkAwards, closeAwards, initAwardsTab } from './awards.js';
 import * as chat from './chat.js';
 
@@ -177,6 +178,7 @@ async function startApp(callsign) {
   rigView.initRigView();
   qsl.initQsl();
   initLogbook(document.body.dataset.claimed === '1', callsign);
+  initPrefixLookup();
   keyer.initKeyer();
   $('clearDecoder').onclick = keyer.clearMonitor;
   audio.applySettings();
