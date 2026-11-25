@@ -15,8 +15,8 @@ export const BAND_MAX = 10000;
 const BIN_HZ = 2.5;               // 10 Hz is a whole number of bins, so tuning never lands between columns
 const BINS = (BAND_MAX - BAND_MIN) / BIN_HZ;
 export const VIEW_BINS = SPAN_HZ / BIN_HZ;
-export const ROWS = 150;
-const ROW_MS = 50;                // one stored row covers this long; short dits are peak-held into it
+export const ROWS = 200;
+const ROW_MS = 20;                // below the 25 ms receiver tick, so every tick adds a row and a dit spans several
 
 const rows = Array.from({ length: ROWS }, () => new Uint8Array(BINS));
 const pending = new Float32Array(BINS);
@@ -52,7 +52,7 @@ export function record(signals, { rfGain, listening, ownOffset, now }) {
       const centre = binOf(s.offset);
       for (let b = Math.max(0, centre - 40); b <= Math.min(BINS - 1, centre + 40); b++) {
         const away = (b - centre) * BIN_HZ;
-        scratch[b] += s.amp * Math.exp(-(away * away) / 125);
+        scratch[b] += s.amp * Math.exp(-(away * away) / 60);
       }
     }
     const gain = Math.sqrt(Math.min(rfGain, 4));    // the display saturates long before the audio does
