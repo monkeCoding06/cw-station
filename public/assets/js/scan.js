@@ -24,8 +24,15 @@ let lastFrame = 0;
 const round10 = hz => Math.round(hz / 10) * 10;
 const wrap = hz => (hz > BAND_MAX ? hz - BAND_HZ : hz);
 
+let shownScanning = false;
+
+export const isScanning = () => scanning;
+
 function showState() {
   $('scan').setAttribute('aria-pressed', scanning);
+  if (scanning === shownScanning) return;
+  shownScanning = scanning;
+  document.dispatchEvent(new Event('cw-scan'));
 }
 
 function setDial(offsetHz, commit) {

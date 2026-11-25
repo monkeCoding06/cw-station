@@ -107,8 +107,10 @@ function handle_ping(): never
 {
     $body = read_post_body();
     $user = require_user();
-    $activity = in_array($body['activity'] ?? null, ['general', 'echo', 'practice', 'training', 'inactive'], true) ? $body['activity'] : null;
-    touch_session(($body['leave'] ?? false) === true ? 0 : time(), is_bool($body['listening'] ?? null) ? $body['listening'] : null, $activity);
+    $activity = in_array($body['activity'] ?? null, ['general', 'scanning', 'echo', 'practice', 'training', 'inactive'], true) ? $body['activity'] : null;
+    $freq = $body['freq'] ?? null;
+    $freq = is_int($freq) && $freq >= -10000 && $freq <= 10000 ? $freq : null;
+    touch_session(($body['leave'] ?? false) === true ? 0 : time(), is_bool($body['listening'] ?? null) ? $body['listening'] : null, $activity, $freq);
     respond(['online' => online_callsigns(), 'qsl' => qsl_unseen_count($user)]);
 }
 

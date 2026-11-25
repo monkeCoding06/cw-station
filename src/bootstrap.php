@@ -159,6 +159,9 @@ function db(): PDO
     if (!in_array('activity', $sessionColumns, true)) {
         $pdo->exec("ALTER TABLE sessions ADD COLUMN activity TEXT NOT NULL DEFAULT ''");
     }
+    if (!in_array('freq_hz', $sessionColumns, true)) {
+        $pdo->exec('ALTER TABLE sessions ADD COLUMN freq_hz INTEGER');
+    }
 
     return $pdo;
 }
@@ -206,7 +209,7 @@ function current_user(): ?string
 }
 
 /** Marks this browser's session as active. 0 means "gone" (used when the page closes). */
-function touch_session(int $lastSeen, ?bool $listening = null, ?string $activity = null): void
+function touch_session(int $lastSeen, ?bool $listening = null, ?string $activity = null, ?int $freq = null): void
 {
     $token = token_hash((string) ($_COOKIE['cw_token'] ?? ''));
     $set = ['last_seen = ?'];
@@ -218,6 +221,10 @@ function touch_session(int $lastSeen, ?bool $listening = null, ?string $activity
     if ($activity !== null) {
         $set[] = 'activity = ?';
         $args[] = $activity;
+    }
+    if ($freq !== null) {
+        $set[] = 'freq_hz = ?';
+        $args[] = $freq;
     }
     $args[] = $token;
     db()->prepare('UPDATE sessions SET ' . implode(', ', $set) . ' WHERE token_hash = ?')->execute($args);
@@ -232,7 +239,9 @@ function online_callsigns(): array
     $stmt = db()->prepare(
         'SELECT callsign, MIN(listening) AS listening,
                 (SELECT s2.activity FROM sessions s2 WHERE s2.callsign = s.callsign AND s2.last_seen > :since
-                 ORDER BY s2.last_seen DESC, s2.token_hash LIMIT 1) AS activity
+                 ORDER BY s2.last_seen DESC, s2.token_hash LIMIT 1) AS activity,
+                (SELECT s2.freq_hz FROM sessions s2 WHERE s2.callsign = s.callsign AND s2.last_seen > :since
+                 ORDER BY s2.last_seen DESC, s2.token_hash LIMIT 1) AS freq_hz
          FROM sessions s WHERE last_seen > :since GROUP BY callsign ORDER BY callsign LIMIT 50'
     );
     $stmt->execute(['since' => time() - ONLINE_WINDOW_SECONDS]);
@@ -240,6 +249,8 @@ function online_callsigns(): array
         'call' => $row['callsign'],
         'listening' => (int) $row['listening'] === 1,
         'activity' => (string) $row['activity'],
+        // the tuned frequency is only shared while on air
+        'freq' => $row['activity'] === 'general' && $row['freq_hz'] !== null ? (int) $row['freq_hz'] : null,
     ], $stmt->fetchAll());
 }
 

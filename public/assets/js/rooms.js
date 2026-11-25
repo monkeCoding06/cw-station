@@ -4,7 +4,7 @@ import { openCallMenu } from './rigview.js';
 import { audioContext, marksToRuns, playRuns, receiveLatencyMs, stopAllVoices } from './audio.js';
 import { hooks } from './keyer.js';
 import { createTransmitter } from './transmit.js';
-import { filterGain, isPowered, receiverInput, resetBand, tuneOffset, update as updateRig } from './rig.js';
+import { filterGain, isPowered, offsetKHz, receiverInput, resetBand, tuneOffset, update as updateRig } from './rig.js';
 
 /*
  * The General room (shared band, via the server), the Echo room (your own
@@ -143,7 +143,7 @@ async function sendToServer(transmission) {
   }
 }
 
-const ACTIVITY_LABELS = { general: 'on air', echo: 'echo', practice: 'practice', training: 'training', inactive: 'inactive' };
+const ACTIVITY_LABELS = { general: 'on air', scanning: 'scanning', echo: 'echo', practice: 'practice', training: 'training', inactive: 'inactive' };
 
 let onlineSignature = '';
 
@@ -155,7 +155,7 @@ export function showOnline(stations) {
   const focused = list.contains(document.activeElement) ? document.activeElement.dataset.call : null;
 
   $('onlineCount').textContent = stations.length;
-  list.replaceChildren(...stations.map(({ call, listening, activity }) => {
+  list.replaceChildren(...stations.map(({ call, listening, activity, freq }) => {
     const item = document.createElement('li');
     if (call === me) {
       item.textContent = call;
@@ -169,9 +169,10 @@ export function showOnline(stations) {
       name.onclick = () => openCallMenu(call, name);
       item.append(name);
     }
-    const quiet = listening && activity !== 'inactive';
+    const quiet = listening && activity !== 'inactive' && activity !== 'scanning';
     const state = quiet ? 'listening' : activity;
-    const label = quiet ? 'just receiving' : ACTIVITY_LABELS[activity];
+    const base = quiet ? 'just receiving' : ACTIVITY_LABELS[activity];
+    const label = base && activity === 'general' && !quiet && Number.isInteger(freq) ? `${base} · ${offsetKHz(freq)} kHz` : base;
     if (label) {
       const tag = document.createElement('small');
       tag.textContent = label;

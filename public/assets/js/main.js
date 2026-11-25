@@ -59,12 +59,12 @@ const PING_INTERVAL_MS = 3000;
 const LISTEN_KEY = 'cw-just-receiving';
 
 /** Keeps us on the online list in every room, and takes us off it when the page closes. */
-function startPresence(onPing) {
+function startPresence(onPing, tunedOffset) {
   const button = $('listen');
   let listening = localStorage.getItem(LISTEN_KEY) === '1';
   let activity;
 
-  const ping = () => api('ping', { post: { listening, activity } }).then(onPing).catch(error => {
+  const ping = () => api('ping', { post: { listening, activity, freq: tunedOffset() } }).then(onPing).catch(error => {
     if (error.status === 401) location.reload();
   });
   const show = () => button.setAttribute('aria-pressed', String(listening));
@@ -81,10 +81,12 @@ function startPresence(onPing) {
   window.addEventListener('pagehide', () => {
     api('ping', { post: { leave: true }, keepalive: true }).catch(() => {});
   });
-  return room => {
+  const setActivity = room => {
     activity = room;
     ping();
   };
+  setActivity.refresh = ping;
+  return setActivity;
 }
 
 /* ---------- Main app ---------- */
@@ -151,6 +153,12 @@ async function startApp(callsign) {
   const setActivity = startPresence(data => {
     rooms.showOnline(data.online);
     qsl.setQslCount(data.qsl || 0);
+  }, rig.tuneOffset);
+  // dragging the tuning knob fires a change per step; report once it settles
+  let retune;
+  $('vfo').addEventListener('change', () => {
+    clearTimeout(retune);
+    retune = setTimeout(setActivity.refresh, 1000);
   });
   startClaim();
 
@@ -180,9 +188,12 @@ async function startApp(callsign) {
   let currentRoom = null;
   // with the receiver off, General shows us as inactive
   const reportActivity = () => {
-    if (currentRoom) setActivity(currentRoom === 'general' && !rig.isPowered() ? 'inactive' : currentRoom);
+    if (!currentRoom) return;
+    const onAir = currentRoom === 'general';
+    setActivity(onAir && !rig.isPowered() ? 'inactive' : onAir && scan.isScanning() ? 'scanning' : currentRoom);
   };
   document.addEventListener('cw-power', reportActivity);
+  document.addEventListener('cw-scan', reportActivity);
   $('moreToggle').onclick = () => setMoreOpen(!document.querySelector('.settings').classList.contains('more-open'));
   $('logToggle').onclick = () => {
     closeAwards();

@@ -108,6 +108,7 @@ button { cursor: pointer; }
 #onlineList small[data-state=training] { --state: #ffb000; }
 #onlineList small[data-state=listening] { --state: #b9b4a6; }
 #onlineList small[data-state=inactive] { --state: #6b6b66; }
+#onlineList small[data-state=scanning] { --state: #b07cff; }
 
 input[type=text], input[type=password], input[type=search], textarea, select {
   background: #0e0e0d;

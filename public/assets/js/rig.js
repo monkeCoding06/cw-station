@@ -26,7 +26,8 @@ export const listeners = { power: null, active: null, reset: null };
 export { SPAN_HZ, BAND_MIN, BAND_MAX };
 
 export const tuneOffset = () => +$('vfo').value;
-export const tunedKHz = () => ((BAND_START_HZ + tuneOffset()) / 1000).toFixed(3);
+export const offsetKHz = offsetHz => ((BAND_START_HZ + offsetHz) / 1000).toFixed(3);
+export const tunedKHz = () => offsetKHz(tuneOffset());
 export const isPowered = () => powered;
 
 let rxLevel = 0;
