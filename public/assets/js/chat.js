@@ -49,19 +49,24 @@ function initPingToggle() {
   show();
 }
 
+const receiverOn = () => document.body.classList.contains('rx-on');
+
 function controls() {
-  $('chatText').disabled = !ready;
-  $('chatSend').disabled = !ready || sending;
+  const open = ready && receiverOn();
+  $('chatText').disabled = !open;
+  $('chatSend').disabled = !open || sending;
+  $('chatText').placeholder = ready && !receiverOn() ? 'Turn the receiver on to chat' : 'Say something';
 }
 
 export function initChat(call) {
   callsign = call;
   initPingToggle();
+  document.addEventListener('cw-power', controls);
   $('chatForm').addEventListener('submit', async event => {
     event.preventDefault();
     const input = $('chatText');
     const text = input.value.trim();
-    if (!ready || sending || !text) return;
+    if (!ready || sending || !text || !receiverOn()) return;
     const id = view;
     sending = true;
     controls();

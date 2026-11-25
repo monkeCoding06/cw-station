@@ -291,7 +291,8 @@ function qsl_card_row(array $row): array
 /** Stores a snapshot of the sender's saved design. Later edits to the design do not change it. */
 function send_qsl(string $from, string $to): array
 {
-    $pdo = db();    if (preg_match(CALLSIGN_PATTERN, $to) !== 1 || $to === $from) {
+    $pdo = db();
+    if (preg_match(CALLSIGN_PATTERN, $to) !== 1 || $to === $from) {
         throw new ApiError(400, 'Choose another station');
     }
     if (find_account($from) === null) {

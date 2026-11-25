@@ -4,7 +4,7 @@ import { openCallMenu } from './rigview.js';
 import { audioContext, marksToRuns, playRuns, receiveLatencyMs, stopAllVoices } from './audio.js';
 import { hooks } from './keyer.js';
 import { createTransmitter } from './transmit.js';
-import { filterGain, receiverInput, resetBand, tuneOffset, update as updateRig } from './rig.js';
+import { filterGain, isPowered, receiverInput, resetBand, tuneOffset, update as updateRig } from './rig.js';
 
 /*
  * The General room (shared band, via the server), the Echo room (your own
@@ -132,7 +132,7 @@ function echoLocally(transmission) {
 /* ---------- General room: server transport ---------- */
 
 async function sendToServer(transmission) {
-  if (!connected) return;
+  if (!connected || !isPowered()) return;
   const mine = generation;
   try {
     await api('cw_send', {post: {view, ...transmission}});
@@ -143,7 +143,7 @@ async function sendToServer(transmission) {
   }
 }
 
-const ACTIVITY_LABELS = { general: 'on air', echo: 'echo', practice: 'practice', training: 'training' };
+const ACTIVITY_LABELS = { general: 'on air', echo: 'echo', practice: 'practice', training: 'training', inactive: 'inactive' };
 
 let onlineSignature = '';
 
@@ -169,8 +169,9 @@ export function showOnline(stations) {
       name.onclick = () => openCallMenu(call, name);
       item.append(name);
     }
-    const state = listening ? 'listening' : activity;
-    const label = listening ? 'just receiving' : ACTIVITY_LABELS[activity];
+    const quiet = listening && activity !== 'inactive';
+    const state = quiet ? 'listening' : activity;
+    const label = quiet ? 'just receiving' : ACTIVITY_LABELS[activity];
     if (label) {
       const tag = document.createElement('small');
       tag.textContent = label;

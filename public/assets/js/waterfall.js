@@ -16,7 +16,7 @@ const BIN_HZ = 2.5;               // 10 Hz is a whole number of bins, so tuning 
 const BINS = (BAND_MAX - BAND_MIN) / BIN_HZ;
 export const VIEW_BINS = SPAN_HZ / BIN_HZ;
 export const ROWS = 150;
-const ROW_MS = 100;               // one stored row covers this long; short dits are peak-held into it
+const ROW_MS = 50;                // one stored row covers this long; short dits are peak-held into it
 
 const rows = Array.from({ length: ROWS }, () => new Uint8Array(BINS));
 const pending = new Float32Array(BINS);
@@ -26,8 +26,9 @@ let stored = 0;                   // how many rows hold real history
 let lastRowAt = 0;
 
 const palette = new Uint32Array(256).map((_, i) => {
-  const a = i / 255;
-  const red = 12 + 185 * a * a, green = 18 + 230 * a, blue = 9 + 97 * a * a;
+  // Noise floor stays near black, so keyed signals stand out as bright traces.
+  const a = Math.min(1, Math.max(0, (i / 255 - .2) / .5));
+  const red = 4 + 251 * a ** 1.6, green = 8 + 247 * Math.sqrt(a), blue = 6 + 150 * a ** 2.5;
   return (255 << 24) | (blue << 16) | (green << 8) | red;     // ImageData is little-endian RGBA
 });
 const BACKGROUND = palette[0];

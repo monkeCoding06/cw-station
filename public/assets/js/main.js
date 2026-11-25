@@ -178,6 +178,11 @@ async function startApp(callsign) {
   for (const id of SAVED_SETTINGS) $(id).addEventListener('change', saveSettings);
 
   let currentRoom = null;
+  // with the receiver off, General shows us as inactive
+  const reportActivity = () => {
+    if (currentRoom) setActivity(currentRoom === 'general' && !rig.isPowered() ? 'inactive' : currentRoom);
+  };
+  document.addEventListener('cw-power', reportActivity);
   $('moreToggle').onclick = () => setMoreOpen(!document.querySelector('.settings').classList.contains('more-open'));
   $('logToggle').onclick = () => {
     closeAwards();
@@ -208,7 +213,7 @@ async function startApp(callsign) {
     }
 
     rooms.enterRoom(name);
-    setActivity(name);
+    reportActivity();
     if (name === 'training') training.enterTraining();
   }
 

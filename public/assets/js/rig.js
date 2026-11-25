@@ -81,6 +81,7 @@ export function setPower(on) {
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
   if (listeners.power) listeners.power(on);
+  document.dispatchEvent(new Event('cw-power'));
 }
 
 export function silence() {

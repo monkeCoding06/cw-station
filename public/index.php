@@ -207,7 +207,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
     <section class="unit keyer" data-rooms="general echo practice training">
       <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
 
-      <div class="readout">
+      <div class="readout" data-rooms="echo practice training">
         <pre id="rx" aria-live="polite">▏</pre>
         <div class="readout-foot" data-nokey>
           <div id="signal">Ready</div>
