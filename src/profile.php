@@ -8,10 +8,10 @@ declare(strict_types=1);
  */
 
 const RIG_CHOICES = [
-    'face' => ['matte', 'brushed', 'charcoal', 'vintage', 'navy', 'olive', 'carbon', 'maroon', 'sand', 'teal', 'blueprint'],
-    'dial' => ['green', 'amber', 'ice', 'violet', 'red', 'white', 'blue', 'mint'],
-    'knob' => ['black-silver', 'ribbed', 'bakelite', 'chrome', 'brass', 'copper', 'gold', 'blue', 'titanium', 'red', 'smoke'],
-    'meter' => ['black', 'cream', 'amber', 'ivory', 'mono', 'sunset', 'night'],
+    'face' => ['matte', 'brushed', 'charcoal', 'vintage', 'navy', 'olive', 'carbon', 'maroon', 'sand', 'teal', 'blueprint', 'leather', 'walnut', 'concrete', 'diamond', 'pcb', 'tartan', 'denim'],
+    'dial' => ['green', 'amber', 'ice', 'violet', 'red', 'white', 'blue', 'mint', 'lime', 'cyan', 'rose'],
+    'knob' => ['black-silver', 'ribbed', 'bakelite', 'chrome', 'brass', 'copper', 'gold', 'blue', 'titanium', 'red', 'smoke', 'rosegold', 'jade', 'onyx'],
+    'meter' => ['black', 'cream', 'amber', 'ivory', 'mono', 'sunset', 'night', 'forest', 'ruby'],
 ];
 const RIG_MAX_TAPES = 3;
 

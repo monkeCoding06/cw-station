@@ -30,6 +30,22 @@ const ACHIEVEMENTS = [
     'train_100'   => ['Steady fist', 'Copy 100 trainer characters', 'train', 100, ['dial', 'mint']],
     'train_500'   => ['Quick copy', 'Copy 500 trainer characters', 'train', 500, ['meter', 'night']],
     'train_2500'  => ['Grandmaster', 'Copy 2500 trainer characters', 'train', 2500, ['face', 'blueprint']],
+
+    'log_25'       => ['Scribe', 'Write 25 logbook entries', 'log', 25, ['face', 'leather']],
+    'contacts_15'  => ['Roundtable', 'Log 15 different stations', 'contacts', 15, ['face', 'walnut']],
+    'qsl_sent_10'  => ['Stamp collector', 'Send 10 QSL cards', 'qsl_sent', 10, ['face', 'concrete']],
+    'train_750'    => ['Rapid reader', 'Copy 750 trainer characters', 'train', 750, ['face', 'diamond']],
+    'contacts_100' => ['Centurion', 'Log 100 different stations', 'contacts', 100, ['face', 'pcb']],
+    'qsl_recv_10'  => ['Mailbox full', 'Receive 10 QSL cards', 'qsl_recv', 10, ['face', 'tartan']],
+    'log_200'      => ['Historian', 'Write 200 logbook entries', 'log', 200, ['face', 'denim']],
+    'train_50'     => ['Warm-up', 'Copy 50 trainer characters', 'train', 50, ['dial', 'lime']],
+    'contacts_35'  => ['Band fixture', 'Log 35 different stations', 'contacts', 35, ['dial', 'cyan']],
+    'qsl_recv_50'  => ['Celebrity', 'Receive 50 QSL cards', 'qsl_recv', 50, ['dial', 'rose']],
+    'qsl_sent_50'  => ['Postmaster', 'Send 50 QSL cards', 'qsl_sent', 50, ['knob', 'rosegold']],
+    'log_75'       => ['Keeper', 'Write 75 logbook entries', 'log', 75, ['knob', 'jade']],
+    'train_5000'   => ['Living legend', 'Copy 5000 trainer characters', 'train', 5000, ['knob', 'onyx']],
+    'log_150'      => ['Chart room', 'Write 150 logbook entries', 'log', 150, ['meter', 'forest']],
+    'train_1500'   => ['Blazing copy', 'Copy 1500 trainer characters', 'train', 1500, ['meter', 'ruby']],
 ];
 
 function award_counters(string $user): array
