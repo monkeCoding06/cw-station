@@ -1,5 +1,6 @@
 import { $, api } from './util.js';
 import { checkAwards } from './awards.js';
+import { cleanDisplay, defaultDisplay } from './waterfall.js';
 
 /*
  * Rig appearance. A rig is a small record of whitelisted options; the look comes
@@ -12,7 +13,7 @@ const MAX_TAPES = 3;
 const TAPE_PATTERN = /^[A-Za-z0-9 /.,?!+-]{1,10}$/;
 
 export const ORIGINAL = {
-  face: 'matte', dial: 'green', knob: 'ribbed', meter: 'black', backlight: false, tapes: [],
+  face: 'matte', dial: 'green', knob: 'ribbed', meter: 'black', backlight: false, tapes: [], display: defaultDisplay(),
 };
 
 export const PRESETS = {
@@ -40,6 +41,7 @@ export function clean(input) {
     if (allowed.includes(input[key])) rig[key] = input[key];
   }
   rig.backlight = input.backlight === true;
+  rig.display = cleanDisplay(input.display);
   if (Array.isArray(input.tapes)) {
     for (const tape of input.tapes.slice(0, MAX_TAPES)) {
       const x = Math.round(+tape?.x), y = Math.round(+tape?.y);
@@ -120,9 +122,13 @@ function makeMovable(label, container, index, onMove) {
   });
 }
 
+/** Spectrum and waterfall colours go to the receiver display, which listens for this. */
+export const applyDisplay = display => document.dispatchEvent(new CustomEvent('cw-display', { detail: display }));
+
 /** Shows a rig on the live station. Everything that draws the rig goes through here. */
 export function showRig(rig) {
   applyLook($('bench'), rig);
+  applyDisplay(rig.display);
   for (const container of document.querySelectorAll('[data-tapes]')) drawTapes(container, rig);
   for (const fn of listeners) fn(rig);
 }

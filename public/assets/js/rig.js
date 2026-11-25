@@ -3,6 +3,7 @@ import { audioContext, enableAudio, masterOutput } from './audio.js';
 import { isKeyDown } from './keyer.js';
 import * as waterfall from './waterfall.js';
 import { BAND_MAX, BAND_MIN, ROWS, SPAN_HZ, VIEW_BINS } from './waterfall.js';
+import { clearSpectrum, drawSpectrum, initSpectrum, setTraceColor } from './spectrum.js';
 
 /*
  * The receiver rig shared by every room: tuning dial, waterfall, power,
@@ -78,6 +79,7 @@ export function setPower(on) {
   if (!on) {
     silence();
     waterfall.clear();
+    clearSpectrum();
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
   if (listeners.power) listeners.power(on);
@@ -127,11 +129,32 @@ function updateTuning() {
   if (powered) draw();
 }
 
-/** Shows the part of the recorded band that is under the dial. */
+/** Marks the receive passband on one pane. */
+function shade(c, target) {
+  const perHz = target.width / SPAN_HZ;
+  const bandwidth = parseInt($('bw').value);
+  const left = (tuneOffset() - bandwidth / 2 - windowStart()) * perHz;
+  c.fillStyle = 'rgba(255, 255, 255, .07)';
+  c.fillRect(left, 0, bandwidth * perHz, target.height);
+  c.fillStyle = 'rgba(255, 255, 255, .22)';
+  c.fillRect(left, 0, 1, target.height);
+  c.fillRect(left + bandwidth * perHz - 1, 0, 1, target.height);
+}
+
+/** Shows the part of the recorded band that is under the dial, in both panes, with the receive passband marked. */
 function draw() {
   waterfall.render(pixels, windowStart());
   ctx.putImageData(picture, 0, 0);
+  shade(ctx, canvas);
+  drawSpectrum(windowStart(), shade);
 }
+
+/** New spectrum and waterfall colours; the history is recoloured in place. */
+document.addEventListener('cw-display', event => {
+  waterfall.setPalette(event.detail);
+  setTraceColor(event.detail.trace);
+  if (powered && ctx) draw();
+});
 
 /**
  * Call every few milliseconds. `signals` is [{ offset, amp }]: what is keyed right now.
@@ -175,23 +198,29 @@ export function initRig() {
   ctx = canvas.getContext('2d');
   picture = ctx.createImageData(VIEW_BINS, ROWS);
   pixels = new Uint32Array(picture.data.buffer);
+  initSpectrum($('spectrum'));
 
   $('power').onclick = () => {
     receiverInput();
     setPower(!powered);
   };
   $('vfo').oninput = updateTuning;
-  canvas.onclick = e => {
-    const rect = canvas.getBoundingClientRect();
+  const tuneFromClick = e => {
+    const rect = e.currentTarget.getBoundingClientRect();
     const offsetHz = windowStart() + (e.clientX - rect.left) / rect.width * SPAN_HZ;
     const step = +$('vfo').step;
     tuneTo(Math.round(offsetHz / step) * step);
   };
+  canvas.onclick = tuneFromClick;
+  $('spectrum').onclick = tuneFromClick;
   $('tuneStep').onclick = () => setTuneStep($('vfo').step === '100');
   $('rf').oninput = () => { $('rfOut').value = $('rf').value + ' dB'; };
   $('rf').oninput();
   $('vol').addEventListener('input', () => { $('volOut').value = $('vol').value + '%'; });
-  $('bw').addEventListener('change', () => { $('bwOut').value = $('bw').value; });
+  $('bw').addEventListener('change', () => {
+    $('bwOut').value = $('bw').value;
+    if (powered) draw();
+  });
   $('vol').dispatchEvent(new Event('input'));
   $('bw').dispatchEvent(new Event('change'));
   updateTuning();

@@ -105,7 +105,8 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
             </div>
           </div>
           <div class="scope">
-            <canvas id="water" width="720" height="150" aria-label="Waterfall. Click to tune."></canvas>
+            <div class="pane spectrum-pane"><canvas id="spectrum" aria-label="Spectrum. Click to tune."></canvas></div>
+            <div class="pane"><canvas id="water" width="720" height="150" aria-label="Waterfall. Click to tune."></canvas></div>
             <i id="cursor"></i>
             <div id="powerHint">Receiver off<br><small>Flip the power switch to turn it on</small></div>
           </div>

@@ -1,9 +1,12 @@
 import { $, api, h, isolateKeys } from './util.js';
 import { queueGuestUpload } from './logbook.js';
 import { loadAwards, lockOf } from './awards.js';
-import { CHOICES, ORIGINAL, PRESETS, applyLook, clean, drawTapes, saveRig, savedRig, showRig } from './rigstyle.js';
+import { CHOICES, ORIGINAL, PRESETS, applyDisplay, applyLook, clean, drawTapes, saveRig, savedRig, showRig } from './rigstyle.js';
+import { gradientCss } from './waterfall.js';
 
 const LABELS = { face: 'Faceplate', dial: 'Dial', knob: 'Knob', meter: 'Meter' };
+const DISPLAY_PRESETS = { gqrx: 'Gqrx', classic: 'Classic', custom: 'Custom' };
+const STOP_NAMES = ['Noise floor', 'Weak', 'Medium', 'Strong'];
 const SLOT_X = [22, 50, 78];
 const TAPE_Y = 70;
 
@@ -23,6 +26,9 @@ function draftRig() {
 function preview() {
   const rig = draftRig();
   applyLook($('bench'), rig);
+  applyDisplay(rig.display);
+  const gradient = editor.querySelector('.gradient');
+  if (gradient) gradient.style.background = gradientCss(rig.display);
   const filled = slots.map((slot, index) => slot.t.trim() ? index : -1).filter(index => index >= 0);
   for (const container of document.querySelectorAll('[data-tapes]')) {
     drawTapes(container, rig, (tape, x, y) => {
@@ -51,6 +57,25 @@ function build() {
     h('label', { class: 'check' },
       h('input', { type: 'checkbox', id: 'rigBacklight', checked: draft.backlight, onchange: event => { draft.backlight = event.target.checked; preview(); } }),
       ' Meter backlight'),
+    h('fieldset', { class: 'display-colors' },
+      h('legend', {}, 'Spectrum & waterfall'),
+      h('div', { class: 'gradient', 'aria-hidden': 'true' }),
+      h('div', { class: 'row' }, Object.entries(DISPLAY_PRESETS).map(([value, label]) =>
+        h('label', { class: 'chip' },
+          h('input', {
+            type: 'radio', name: 'rig-display', value, checked: draft.display.preset === value,
+            onchange: () => { draft.display.preset = value; preview(); },
+          }),
+          h('span', {}, label)))),
+      h('div', { class: 'stops' }, STOP_NAMES.map((name, i) => h('label', {},
+        h('input', {
+          type: 'color', value: draft.display.colors[i],
+          oninput: event => { setCustom(colors => { colors[i] = event.target.value; }); },
+        }),
+        ' ' + name)),
+        h('label', {},
+          h('input', { type: 'color', value: draft.display.trace, oninput: event => { draft.display.trace = event.target.value; preview(); } }),
+          ' Spectrum trace'))),
     h('fieldset', {},
       h('legend', {}, 'Tape captions'),
       h('div', { class: 'tape-inputs' }, slots.map((slot, index) => h('input', {
@@ -76,6 +101,15 @@ function build() {
 
 function sync() {
   build();
+  preview();
+}
+
+/** Editing a stop switches to the custom palette without rebuilding the sheet, so a colour picker stays open. */
+function setCustom(change) {
+  change(draft.display.colors);
+  draft.display.preset = 'custom';
+  const radio = editor.querySelector('input[name="rig-display"][value="custom"]');
+  if (radio) radio.checked = true;
   preview();
 }
 

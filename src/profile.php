@@ -29,8 +29,34 @@ function default_rig(): array
 {
     return [
         'face' => 'matte', 'dial' => 'green', 'knob' => 'ribbed', 'meter' => 'black',
-        'backlight' => false, 'tapes' => [],
+        'backlight' => false, 'tapes' => [], 'display' => default_display(),
     ];
+}
+
+function default_display(): array
+{
+    return ['preset' => 'gqrx', 'colors' => ['#020722', '#0a2a9a', '#16d0e8', '#ffb030'], 'trace' => '#dff6ff'];
+}
+
+/** Spectrum and waterfall colours. Rigs saved before this existed have none, so anything unusable falls back to the default. */
+function validate_display(mixed $input): array
+{
+    $display = default_display();
+    if (!is_array($input)) {
+        return $display;
+    }
+    $hex = fn(mixed $v): bool => is_string($v) && preg_match('/^#[0-9a-f]{6}$/D', $v) === 1;
+    if (in_array($input['preset'] ?? null, ['gqrx', 'classic', 'custom'], true)) {
+        $display['preset'] = $input['preset'];
+    }
+    $colors = $input['colors'] ?? null;
+    if (is_array($colors) && array_is_list($colors) && count($colors) === 4 && count(array_filter($colors, $hex)) === 4) {
+        $display['colors'] = $colors;
+    }
+    if ($hex($input['trace'] ?? null)) {
+        $display['trace'] = $input['trace'];
+    }
+    return $display;
 }
 
 /** Returns a clean rig record or throws. Only known options and short plain captions get through. */
@@ -67,6 +93,7 @@ function validate_rig(mixed $input): array
         }
         $rig['tapes'][] = ['t' => $text, 'x' => $x, 'y' => $y];
     }
+    $rig['display'] = validate_display($input['display'] ?? null);
     return $rig;
 }
 

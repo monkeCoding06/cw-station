@@ -257,12 +257,16 @@ body.rx-on .lcd::after, .lcd.lit::after {
 
 .scope {
   position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   margin-top: .45rem;
-  height: 150px;
+  height: 230px;
   background: #030603;
   overflow: hidden;
 }
-.scope canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.pane { position: relative; min-height: 0; }
+.spectrum-pane { border-bottom: 1px solid rgba(255, 255, 255, .18); }
+.scope canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: crosshair; }
 #cursor {
   position: absolute;
   top: 0; bottom: 0;
@@ -635,7 +639,7 @@ summary { cursor: pointer; font: var(--legend); letter-spacing: .14em; text-tran
   .scale { font-size: .7rem; }
   .scale .t25, .scale .t75 { display: none; }
   #dial { font-size: clamp(1.45rem, 8vw, 1.9rem); white-space: nowrap; }
-  .scope { height: 120px; }
+  .scope { height: 180px; }
   .knobs { flex-wrap: wrap; justify-content: space-around; gap: 1rem .6rem; }
   .knob-sm { width: 3.4rem; height: 3.4rem; }
   .knob-lg { width: 4.4rem; height: 4.4rem; }
@@ -900,6 +904,10 @@ body.awards-open .bench, body.awards-open .logbook { display: none; }
 .check { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
 .tape-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; width: 100%; }
 .tape-inputs input { min-width: 0; font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; }
+.display-colors .gradient { width: 100%; height: 1.1rem; border: 1px solid var(--panel-edge); border-radius: 3px; }
+.display-colors .row, .display-colors .stops { display: flex; flex-wrap: wrap; gap: .3rem .8rem; width: 100%; }
+.display-colors .stops label { display: flex; align-items: center; gap: .3rem; font-size: .8rem; }
+.display-colors input[type=color] { width: 2rem; height: 1.6rem; padding: 0; border: 1px solid var(--panel-edge); background: none; }
 
 .overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: .8rem; background: rgba(0, 0, 0, .72); }
 .dialog {
@@ -1005,7 +1013,7 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
   .rig-top { display: contents; }
   .window { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; padding: .3rem; }
   .lcd { padding: .25rem .5rem; }
-  .scope { flex: none; height: 3rem; margin-top: .25rem; }
+  .scope { flex: none; height: 4.5rem; margin-top: .25rem; }
   .scope canvas { position: absolute; inset: 0; }
   .scale, .lcd-line { display: none; }
   #dial { font-size: clamp(1.2rem, 6.5vw, 1.6rem); }
