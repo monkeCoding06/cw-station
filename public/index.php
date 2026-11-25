@@ -107,6 +107,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
           <div class="scope">
             <canvas id="water" width="720" height="150" aria-label="Waterfall. Click to tune."></canvas>
             <i id="cursor"></i>
+            <div id="powerHint">Receiver off<br><small>Flip the power switch to turn it on</small></div>
           </div>
           <div class="scale" aria-hidden="true">
             <span class="t0">7029</span><span class="t25">.5</span><span class="t50">7030</span><span class="t75">.5</span><span class="t100">7031 kHz</span>

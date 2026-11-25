@@ -347,6 +347,30 @@ body.rx-on #cursor { opacity: .85; }
 }
 #power[aria-pressed=true]::after { top: .1rem; }
 
+/* the receiver starts off, so the switch calls for attention until it is used */
+#power[aria-pressed=false] { border-color: var(--accent); animation: power-call 1.6s ease-in-out infinite; }
+@keyframes power-call {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 .9rem .15rem var(--accent); }
+}
+#powerHint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+#powerHint small { font-size: .7em; font-weight: 400; letter-spacing: .04em; text-transform: none; opacity: .85; }
+body.rx-on #powerHint { display: none; }
+@media (prefers-reduced-motion: reduce) { #power[aria-pressed=false] { animation: none; } }
+
 /* ---------- Knobs ---------- */
 
 .knobs {
