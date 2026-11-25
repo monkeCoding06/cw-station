@@ -167,6 +167,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
           <div class="lcd" id="trainLcd">
             <div id="trainChar" aria-live="polite">–</div>
             <div id="trainMorse">&nbsp;</div>
+            <pre id="trainCopy" class="train-copy" aria-live="polite" hidden></pre>
             <div class="lcd-line"><span id="trainPos">&nbsp;</span></div>
             <div class="lcd-line" id="trainStatus" role="status">Choose a method</div>
           </div>
@@ -177,6 +178,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
                 <option>Farnsworth</option>
                 <option>Koch</option>
                 <option>Alphabetical</option>
+                <option>Single letters</option>
               </select>
             </label>
 
@@ -190,8 +192,13 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
       <div class="knobs">
         <div class="knob-group">
           <span class="legend"><span id="trainSpeedLabel">Character speed</span> <output id="trainSpeedOut"></output></span>
-          <div class="knob knob-xl" data-for="trainSpeed" data-label="Training speed" data-unit="WPM" data-px="8"></div>
+          <div class="knob knob-xl" data-for="trainSpeed" data-label="Character speed" data-unit="WPM" data-px="8"></div>
           <input id="trainSpeed" type="range" min="5" max="40" value="20" hidden>
+        </div>
+        <div class="knob-group" id="trainEffGroup" hidden>
+          <span class="legend">Effective speed <output id="trainEffOut"></output></span>
+          <div class="knob knob-xl" data-for="trainEff" data-label="Effective speed" data-unit="WPM" data-px="8"></div>
+          <input id="trainEff" type="range" min="5" max="40" value="10" hidden>
         </div>
         <div class="knob-group">
           <span class="legend">Volume <output id="trainVolOut"></output></span>
@@ -201,6 +208,8 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
 
       <div class="tools">
         <button id="trainReplay" type="button" disabled>Replay</button>
+        <button id="trainCheck" type="button" hidden disabled>Check copy</button>
+        <button id="trainNext" type="button" hidden disabled>Next</button>
         <button id="trainRestart" type="button" disabled>Restart</button>
       </div>
     </section>
@@ -208,6 +217,12 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
     <!-- Keyer -->
     <section class="unit keyer" data-rooms="general echo practice training">
       <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+
+      <div class="type-box" data-nokey hidden>
+        <label><span class="legend">Type the letter you heard</span>
+          <input id="trainType" class="train-type" maxlength="2" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="?">
+        </label>
+      </div>
 
       <div class="readout" data-rooms="echo practice training">
         <pre id="rx" aria-live="polite">▏</pre>

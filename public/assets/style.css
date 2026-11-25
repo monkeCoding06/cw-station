@@ -556,6 +556,15 @@ body.tx #signal { color: var(--accent); }
 #trainLcd { text-align: center; }
 #trainChar { font-size: 4rem; font-weight: 700; line-height: 1.1; }
 #trainMorse { font-size: 2.4rem; letter-spacing: .1em; line-height: 1.1; }
+.train-copy { margin: .3rem 0 0; font: inherit; font-size: 1.05rem; letter-spacing: .08em; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
+.train-copy .miss { color: #ff6a5a; }
+.train-type { width: 7rem; display: block; margin-top: .3rem; text-align: center; text-transform: uppercase; font: inherit; font-size: 2rem; }
+.type-box { display: flex; justify-content: center; padding: 1rem 0; }
+.type-box label { display: grid; justify-items: center; gap: .3rem; }
+.keyer.typing > :not(.type-box):not(.screw) { display: none !important; }
+#trainLcd.receiving #trainChar { animation: receiving 1.2s ease-in-out infinite; }
+@keyframes receiving { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { #trainLcd.receiving #trainChar { animation: none; } }
 .train-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .6rem; margin-top: .6rem; }
 .train-row label { display: grid; gap: .2rem; }
 #trainType { text-transform: uppercase; text-align: center; font-size: 1.1rem; }

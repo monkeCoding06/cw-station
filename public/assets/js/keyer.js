@@ -101,6 +101,13 @@ function onKeyUp(now) {
   wordTimer = setTimeout(finishWord, 6.5 * markUnit);
 }
 
+/** Decodes the letter still being keyed, without waiting for the letter gap. */
+export function commitLetter() {
+  clearTimeout(letterTimer);
+  clearTimeout(wordTimer);
+  finishLetter();
+}
+
 export function clearMonitor() {
   stopKeyer();
   clearTimeout(letterTimer);
