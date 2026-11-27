@@ -274,10 +274,23 @@ function initTouchKey() {
 
 /*
  * USB paddle over Web Serial. The firmware sends 'a'/'A' for dit down/up and
- * 'b'/'B' for dah down/up at 921600 baud.
+ * 'b'/'B' for dah down/up at 921600 baud. The host sends 'h' until the
+ * firmware answers 'H'.
  */
 const SERIAL_BITS = { a: [DIT, true], A: [DIT, false], b: [DAH, true], B: [DAH, false] };
 let serialPort = null;
+let helloTimer = 0;
+
+// Tells the firmware a host is connected ('h'); it answers 'H' once it is calibrated.
+function startHello(port) {
+  const writer = port.writable.getWriter();
+  const hello = new Uint8Array([0x68]);
+  const send = () => writer.write(hello).catch(() => clearInterval(helloTimer));
+  clearInterval(helloTimer);
+  helloTimer = setInterval(send, 500);
+  send();
+  return writer;
+}
 
 async function readSerial(port) {
   const reader = port.readable.getReader();
@@ -288,6 +301,10 @@ async function readSerial(port) {
       if (!inputEnabled) continue;
       let changed = false;
       for (const byte of value) {
+        if (byte === 0x48) {  // 'H': firmware acknowledged our hello
+          clearInterval(helloTimer);
+          continue;
+        }
         const entry = SERIAL_BITS[String.fromCharCode(byte)];
         if (!entry) continue;
         serialBits = entry[1] ? serialBits | entry[0] : serialBits & ~entry[0];
@@ -319,14 +336,18 @@ function initSerialKey() {
       try { await port.close(); } catch {}
       return;
     }
+    let writer;
     try {
       const port = await navigator.serial.requestPort();
       await port.open({ baudRate: 921600 });
       serialPort = port;
       enableAudio();
       button.classList.add('active');
+      writer = startHello(port);
       await readSerial(port);
     } catch {}
+    clearInterval(helloTimer);
+    if (writer) { try { writer.releaseLock(); } catch {} }
     if (serialPort) { try { await serialPort.close(); } catch {} }
     disconnected();
   };
