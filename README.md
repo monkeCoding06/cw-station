@@ -9,6 +9,7 @@ A browser-based Morse code (CW) station: key with a straight key or paddles, dec
 - **Rooms:** General (shared band with other operators), Echo (your own keying played back), Practice (band and decoder only) and Training.
 - **Keyer and decoder:** straight key and paddle keying, with a live decoder and a sidetone.
 - **Rig:** adjustable WPM, pitch, volume, tuning and receive filter, with a waterfall and band scan.
+- **RF power:** 0.5 to 100 W. Other operators hear and see a weaker signal at lower power; each pair of stations has its own fixed path with slow fading, so 1 W is clear on a good path and lost on a marginal one.
 - **Paddle training:** Koch, Farnsworth and Alphabetical methods, answered on the paddle.
 - **Online list and chat:** see who is on and what they are doing, and chat across all rooms.
 - **Logbook:** save contacts and notes to your callsign.

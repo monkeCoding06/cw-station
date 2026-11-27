@@ -106,7 +106,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
           <div class="lcd">
             <div id="dial">7030.000 kHz</div>
             <div class="lcd-line">
-              VOL <output id="volOut"></output> RF <output id="rfOut"></output> BW <output id="bwOut"></output>
+              VOL <output id="volOut"></output> RF <output id="rfOut"></output> BW <output id="bwOut"></output> PWR <output id="pwrOut"></output>
             </div>
           </div>
           <div class="scope">
@@ -148,6 +148,20 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
             <option>200 Hz</option>
             <option selected>500 Hz</option>
             <option>900 Hz</option>
+          </select>
+        </div>
+        <div class="knob-group">
+          <span class="legend">Pwr <output id="pwrKnobOut"></output></span>
+          <div class="knob knob-sm" data-for="pwr" data-label="RF power" data-px="16"></div>
+          <select id="pwr" hidden>
+            <option>0.5 W</option>
+            <option>1 W</option>
+            <option>2 W</option>
+            <option>5 W</option>
+            <option>10 W</option>
+            <option>25 W</option>
+            <option>50 W</option>
+            <option selected>100 W</option>
           </select>
         </div>
         <div class="knob-group">

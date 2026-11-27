@@ -4,6 +4,7 @@ import { isKeyDown } from './keyer.js';
 import * as waterfall from './waterfall.js';
 import { BAND_MAX, BAND_MIN, ROWS, SPAN_HZ, VIEW_BINS } from './waterfall.js';
 import { clearSpectrum, drawSpectrum, initSpectrum, setTraceColor } from './spectrum.js';
+import { displayLevel } from './signal.js';
 
 /*
  * The receiver rig shared by every room: tuning dial, waterfall, power,
@@ -158,8 +159,9 @@ document.addEventListener('cw-display', event => {
 });
 
 /**
- * Call every few milliseconds. `signals` is [{ offset, amp }]: what is keyed right now.
- * `active` is [{ offset }]: every station in the middle of a transmission, keyed or not.
+ * Call every few milliseconds. `signals` is [{ offset, amp, db? }]: what is keyed right now;
+ * live stations give their received level in dB as well.
+ * `active` is [{ offset, db? }]: every station in the middle of a transmission, keyed or not.
  */
 export function update(signals, active = []) {
   const rfGain = 10 ** (+$('rf').value / 20);
@@ -180,7 +182,11 @@ export function update(signals, active = []) {
     return;
   }
   const gain = Math.sqrt(rfGain);
-  const heard = signals.reduce((sum, s) => sum + s.amp * filterGain(s.offset - tuneOffset()), 0);
+  // live stations carry their level in dB and read on a dB scale, like a real S-meter
+  const heard = signals.reduce((sum, s) => {
+    const through = filterGain(s.offset - tuneOffset());
+    return sum + (s.db === undefined ? s.amp * through : displayLevel(s.db + 20 * Math.log10(through)));
+  }, 0);
   rxLevel = isKeyDown() ? 0 : Math.min(1, .05 * gain + .5 * heard * gain);
   waterfall.record(signals, {
     rfGain,
@@ -218,6 +224,11 @@ export function initRig() {
   $('rf').oninput = () => { $('rfOut').value = $('rf').value + ' dB'; };
   $('rf').oninput();
   $('vol').addEventListener('input', () => { $('volOut').value = $('vol').value + '%'; });
+  $('pwr').addEventListener('change', () => {
+    if ($('pwr').selectedIndex < 0) $('pwr').value = '100 W';
+    $('pwrOut').value = $('pwrKnobOut').value = $('pwr').value;
+  });
+  $('pwr').dispatchEvent(new Event('change'));
   $('bw').addEventListener('change', () => {
     $('bwOut').value = $('bw').value;
     if (powered) draw();

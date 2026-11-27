@@ -2,14 +2,16 @@ import { $ } from './util.js';
 import { audioContext, audioTimeAt, outputLatencyMs, receiveLatencyMs } from './audio.js';
 import { filterGain, receiverInput, tuneOffset } from './rig.js';
 import { StreamTimeline } from './stream.js';
+import { dbToAmp, fadeDb, FLAT_PATH, steadyDb } from './signal.js';
 
 /*
  * Plays remote key streams on the receiver. Each stream has one oscillator for
  * its whole life, keyed by gain automation, so a held key is just a held
- * gain. Audio, waterfall, signal meter and scan all read the same timeline.
+ * gain. Audio, waterfall, signal meter and scan all read the same timeline,
+ * and the same received level: power and path set the keyed gain at each
+ * key-down, fading moves the level gain slowly underneath.
  */
 
-const LEVEL = .8;
 const RAMP = .002;            // time constant of the key envelope, s
 const MAX_STREAMS = 32;
 const ACTIVE_FOR_MS = 1200;   // a station counts as mid-transmission this long after a key-up
@@ -17,10 +19,11 @@ const FORGET_AFTER_MS = 30000;
 
 const toneHz = f => Math.max(25, +$('pitch').value + f - tuneOffset());
 
-export function createReceiver({ fixedDelay = null } = {}) {
-  const streams = new Map();   // id -> { timeline, tone, envelope, level, f, ended }
+/** `pathTo(call)` gives the path from a station to us; without it every station arrives over a clean path. */
+export function createReceiver({ fixedDelay = null, pathTo = null } = {}) {
+  const streams = new Map();   // id -> { timeline, path, tone, envelope, level, f, ended }
 
-  function open(f) {
+  function open(f, call) {
     const input = receiverInput();
     const audio = audioContext();
     const tone = audio.createOscillator();
@@ -28,10 +31,11 @@ export function createReceiver({ fixedDelay = null } = {}) {
     const level = audio.createGain();
     tone.frequency.value = toneHz(f);
     envelope.gain.value = 0;
-    level.gain.value = filterGain(f - tuneOffset());
+    const path = pathTo && call ? pathTo(call) : FLAT_PATH;
+    level.gain.value = filterGain(f - tuneOffset()) * 10 ** (fadeDb(path, Date.now()) / 20);
     tone.connect(envelope).connect(level).connect(input);
     tone.start();
-    return { timeline: new StreamTimeline({ fixedDelay }), tone, envelope, level, f, ended: false };
+    return { timeline: new StreamTimeline({ fixedDelay }), path, tone, envelope, level, f, ended: false };
   }
 
   function close(stream) {
@@ -48,17 +52,19 @@ export function createReceiver({ fixedDelay = null } = {}) {
       const t = audioTimeAt(cancelFrom);
       gain.cancelScheduledValues(t);
       stream.tone.frequency.cancelScheduledValues(t);
-      gain.setTargetAtTime(stream.timeline.state ? LEVEL : 0, t, RAMP);
+      gain.setTargetAtTime(stream.timeline.state ? keyed(stream, stream.timeline.watts) : 0, t, RAMP);
     }
-    for (const { at, on, f } of add) {
+    for (const { at, on, f, p } of add) {
       const t = audioTimeAt(at);
       if (on && f !== stream.f) {
         stream.f = f;
         stream.tone.frequency.setValueAtTime(toneHz(f), t);
       }
-      gain.setTargetAtTime(on ? LEVEL : 0, t, RAMP);
+      gain.setTargetAtTime(on ? keyed(stream, p) : 0, t, RAMP);
     }
   }
+
+  const keyed = (stream, watts) => dbToAmp(steadyDb(watts, stream.path));
 
   return {
     /** A key packet for stream `id`, received at performance.now() `arrival`. */
@@ -66,7 +72,7 @@ export function createReceiver({ fixedDelay = null } = {}) {
       let stream = streams.get(id);
       if (!stream) {
         if (streams.size >= MAX_STREAMS) return;
-        stream = open(packet.f);
+        stream = open(packet.f, packet.call);
         streams.set(id, stream);
       }
       apply(stream, stream.timeline.receive(packet, arrival, receiveLatencyMs()));
@@ -92,14 +98,17 @@ export function createReceiver({ fixedDelay = null } = {}) {
       if (!streams.size) return { signals, active };
       const t = audioContext().currentTime;
       const heardAt = now - outputLatencyMs();
+      const wall = Date.now();
       for (const [id, stream] of streams) {
         apply(stream, stream.timeline.watchdog(now));
         const { f } = stream.timeline.at(now);
+        const fade = fadeDb(stream.path, wall);
         stream.tone.frequency.setTargetAtTime(toneHz(f), t, .004);
-        stream.level.gain.setTargetAtTime(filterGain(f - tuneOffset()), t, .004);
+        stream.level.gain.setTargetAtTime(filterGain(f - tuneOffset()) * 10 ** (fade / 20), t, .004);
         const current = stream.timeline.sample(heardAt);
-        if (current.on) signals.push({ offset: current.f, amp: LEVEL });
-        if (current.on || stream.timeline.queued.length || heardAt - current.at < ACTIVE_FOR_MS) active.push({ offset: current.f });
+        const db = steadyDb(current.p, stream.path) + fade;
+        if (current.on) signals.push({ offset: current.f, amp: dbToAmp(db), db });
+        if (current.on || stream.timeline.queued.length || heardAt - current.at < ACTIVE_FOR_MS) active.push({ offset: current.f, db });
 
         const forgotten = now - stream.timeline.lastArrival > FORGET_AFTER_MS;
         if ((stream.ended || forgotten) && stream.timeline.idleAt(now - 200)) {

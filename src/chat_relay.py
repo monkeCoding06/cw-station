@@ -36,6 +36,8 @@ MAX_FRAME = 4096
 MAX_EVENTS = 64
 MAX_TIME_MS = 2**31
 FREQ_LIMIT = 10000
+TX_POWERS = (0.5, 1, 2, 5, 10, 25, 50, 100)   # watts; the rig's RF PWR steps
+DEFAULT_POWER = 100            # older clients don't send power
 CLOCK_SLACK_MS = 5000          # how far a sender's stream time may run ahead of ours
 PACKET_RATE, PACKET_BURST = 80, 160              # per connection, packets/s
 EDGE_RATE, EDGE_BURST = 120, 240                 # per connection, key transitions/s
@@ -182,6 +184,10 @@ def accept_key(station, msg):
         raise Reject("Invalid key data")
     if type(events) is not list or len(events) > MAX_EVENTS:
         raise Reject("Invalid key data")
+    p = msg.get("p", DEFAULT_POWER)
+    if type(p) not in (int, float) or p not in TX_POWERS:
+        raise Reject("Invalid key data")
+    p = int(p) if p == int(p) else p
     state, last = station.key, station.t
     for event in events:
         if type(event) is not list or len(event) != 2:
@@ -200,7 +206,7 @@ def accept_key(station, msg):
 
     station.q, station.n, station.t, station.key = q, n, last, state
     station.sent = True
-    return {"t": "key", "sid": station.sid, "call": station.call, "q": q, "n": n, "k": k, "f": f, "e": events}
+    return {"t": "key", "sid": station.sid, "call": station.call, "q": q, "n": n, "k": k, "f": f, "p": p, "e": events}
 
 
 def deliver(sender, message):

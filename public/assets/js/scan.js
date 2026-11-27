@@ -1,11 +1,13 @@
 import { $ } from './util.js';
 import { BAND_MAX, BAND_MIN, isPowered, listeners, setTuneStep, tuneOffset, tuneTo } from './rig.js';
+import { SCAN_MIN_DB } from './signal.js';
 
 /*
  * SCAN looks for the next station above the dial (wrapping at the top of the band).
  * If someone is on the air it winds the dial there at once; on a quiet band it keeps
  * sweeping upward and locks the moment somebody keys up. It then stays put, through
  * pauses and after the transmission, until SCAN is pressed again or the dial is turned.
+ * Stations weaker than SCAN_MIN_DB are passed over, even if they can be heard.
  */
 
 const BAND_HZ = BAND_MAX - BAND_MIN;
@@ -113,7 +115,7 @@ export function initScan() {
     skipNear = null;
     stop();
   });
-  listeners.active = list => { stations = list; };
+  listeners.active = list => { stations = list.filter(s => s.db === undefined || s.db >= SCAN_MIN_DB); };
   listeners.power = on => {
     $('scan').disabled = !on;
     skipNear = null;

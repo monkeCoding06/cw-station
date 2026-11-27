@@ -1,3 +1,5 @@
+import { displayLevel } from './signal.js';
+
 /*
  * The band recorder behind the waterfall.
  *
@@ -128,7 +130,7 @@ function paint(target, centre, amp) {
  */
 export function record(signals, { rfGain, listening, ownOffset, now }) {
   frame.fill(0);
-  if (listening) for (const s of signals) paint(frame, binOf(s.offset), s.amp);
+  if (listening) for (const s of signals) paint(frame, binOf(s.offset), s.db === undefined ? s.amp : displayLevel(s.db));
   if (ownOffset !== null) paint(frame, binOf(ownOffset), 1);
   for (let b = 0; b < BINS; b++) if (frame[b] > held[b]) held[b] = frame[b];
 

@@ -34,8 +34,8 @@ class FakeClock:
 relay_close_wait = 4   # the close handshake may wait out close_timeout behind queued frames
 
 
-def key(q, n, k, e, f=0):
-    return json.dumps({"t": "key", "q": q, "n": n, "k": k, "f": f, "e": e})
+def key(q, n, k, e, f=0, **extra):
+    return json.dumps({"t": "key", "q": q, "n": n, "k": k, "f": f, "e": e, **extra})
 
 
 class RelayTest(unittest.IsolatedAsyncioTestCase):
@@ -184,6 +184,35 @@ class RelayTest(unittest.IsolatedAsyncioTestCase):
         await a.send(key(2, 250, 1, []))
         self.assertEqual((await self.recv(b))["k"], 1)
 
+    async def test_power_is_forwarded_and_defaults_for_older_clients(self):
+        a, b = await self.connect("OE1AAA"), await self.connect("OE1BBB")
+        await a.send(key(1, 0, 1, [[0, 1]]))
+        self.assertEqual((await self.recv(b))["p"], 100)
+        for q, (sent, forwarded) in enumerate([(5, 5), (0.5, 0.5), (1.0, 1), (100, 100)], start=2):
+            await a.send(key(q, q, 1, [], p=sent))
+            message = await self.recv(b)
+            self.assertEqual(message["p"], forwarded)
+            self.assertIs(type(message["p"]), type(forwarded))
+
+    async def test_half_watt_survives_key_down_hold_and_key_up(self):
+        a, b = await self.connect("OE1AAA"), await self.connect("OE1BBB")
+        packets = [key(1, 0, 1, [[0, 1]], f=120), key(2, 250, 1, [], f=120), key(3, 300, 0, [[300, 0]], f=120)]
+        for q, packet in enumerate(packets, start=1):
+            await a.send(json.dumps({**json.loads(packet), "p": 0.5}))
+            raw = await asyncio.wait_for(b.recv(), 1)
+            self.assertIn('"p":0.5,', raw)   # a JSON number, not rounded and not a string
+            message = json.loads(raw)
+            self.assertEqual((message["q"], message["f"], message["p"]), (q, 120, 0.5))
+        self.assertEqual([json.loads(p)["e"] for p in packets], [[[0, 1]], [], [[300, 0]]])
+
+    async def test_switching_from_100_to_half_watt_is_forwarded(self):
+        a, b = await self.connect("OE1AAA"), await self.connect("OE1BBB")
+        await a.send(key(1, 0, 1, [[0, 1]], p=100))
+        await a.send(key(2, 60, 0, [[60, 0]], p=100))
+        await a.send(key(3, 120, 1, [[120, 1]], p=0.5))
+        await a.send(key(4, 180, 0, [[180, 0]], p=0.5))
+        self.assertEqual([(await self.recv(b))["p"] for _ in range(4)], [100, 100, 0.5, 0.5])
+
     async def test_end_is_sent_when_a_sender_leaves(self):
         a, b, quiet = await self.connect("OE1AAA"), await self.connect("OE1BBB"), await self.connect("OE1CCC")
         await a.send(key(1, 0, 1, [[0, 1]]))
@@ -207,6 +236,11 @@ class RelayTest(unittest.IsolatedAsyncioTestCase):
             ("Invalid key data", key(1, 10, 0, [[0, 1]])),          # k disagrees with the events
             ("Invalid key data", key(1, 10, 1, [[0, 1]], f=20000)),
             ("Invalid key data", key(1, 10, 1, [[0.5, 1]])),
+            ("Invalid key data", key(1, 10, 1, [[0, 1]], p=3)),
+            ("Invalid key data", key(1, 10, 1, [[0, 1]], p=1000)),
+            ("Invalid key data", key(1, 10, 1, [[0, 1]], p=True)),
+            ("Invalid key data", key(1, 10, 1, [[0, 1]], p="5")),
+            ("Invalid key data", key(1, 10, 1, [[0, 1]], p=None)),
             ("Invalid key data", key(1, 10, 0, [[i % 10, (i + 1) % 2] for i in range(66)])),
             ("Invalid message", json.dumps({"t": "chat", "text": "hi"})),
             ("Invalid message", "not json"),

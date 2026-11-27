@@ -6,6 +6,7 @@ import { hooks } from './keyer.js';
 import { connectLive } from './live.js';
 import { createReceiver } from './playback.js';
 import { createStreamer } from './transmit.js';
+import { cleanWatts, pathBetween } from './signal.js';
 import { isPowered, offsetKHz, resetBand, tuneOffset, update as updateRig } from './rig.js';
 
 /*
@@ -17,6 +18,7 @@ import { isPowered, offsetKHz, resetBand, tuneOffset, update as updateRig } from
 
 const TICK_INTERVAL_MS = 25;
 const ECHO_DELAY_MS = 1000;
+const txWatts = () => cleanWatts(parseFloat($('pwr').value));
 
 let me = '';
 let room = null;
@@ -44,8 +46,8 @@ export function enterRoom(name) {
   resetBand();
 
   if (name === 'general') {
-    receiver = createReceiver();
-    streamer = createStreamer({ send: packet => live?.send(packet), frequency: tuneOffset, canSend: isPowered });
+    receiver = createReceiver({ pathTo: call => pathBetween(me, call) });
+    streamer = createStreamer({ send: packet => live?.send(packet), frequency: tuneOffset, power: txWatts, canSend: isPowered });
     live = connectLive({
       onWelcome: () => streamer.start(),
       onMessage: receiveLive,
@@ -58,7 +60,7 @@ export function enterRoom(name) {
   } else if (name === 'echo') {
     const echo = createReceiver({ fixedDelay: ECHO_DELAY_MS });
     receiver = echo;
-    streamer = createStreamer({ send: packet => echo.handle('echo', packet, performance.now()), frequency: tuneOffset });
+    streamer = createStreamer({ send: packet => echo.handle('echo', packet, performance.now()), frequency: tuneOffset, power: txWatts });
     streamer.start();
   }
 

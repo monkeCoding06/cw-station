@@ -110,7 +110,7 @@ function setChatOpen(open) {
   if (open && getComputedStyle($('chatBox')).display !== 'contents') $('chatText').focus();
 }
 
-const SAVED_SETTINGS = ['mode', 'speed', 'pitch', 'vol', 'latency', 'vfo', 'rf', 'bw'];
+const SAVED_SETTINGS = ['mode', 'speed', 'pitch', 'vol', 'latency', 'vfo', 'rf', 'bw', 'pwr'];
 const SETTINGS_KEY = 'cw-settings-v1';
 
 function loadSettings() {

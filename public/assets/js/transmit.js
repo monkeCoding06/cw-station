@@ -9,6 +9,7 @@
  *   n - when it was sent, in ms since the stream started (the sender's clock only)
  *   k - key state at n: 1 down, 0 up
  *   f - transmit frequency, as Hz offset from 7.030 MHz
+ *   p - transmit power in watts, as set at the latest key-down
  *   e - transitions since the previous packet: [[t, state], ...], t in stream ms
  */
 
@@ -17,10 +18,11 @@ export const HEARTBEAT_MS = 250;
 export const MAX_EVENTS = 64;
 
 /** Returns { key, start, stop, release }. `send(packet)` gets each packet; nothing is sent before start(). */
-export function createStreamer({ send, frequency, canSend = () => true, now = () => performance.now(), timers = globalThis }) {
+export function createStreamer({ send, frequency, power = () => 100, canSend = () => true, now = () => performance.now(), timers = globalThis }) {
   let origin = null;        // performance.now() at stream start, null while there is no stream
   let seq = 0;
   let held = false;
+  let watts = power();      // only picked up at a key-down, so a mark never changes power halfway
   let pending = [];
   let lastFlush = -Infinity;
   let lastT = 0;            // stream times must never run backwards or ahead of the packet
@@ -39,7 +41,7 @@ export function createStreamer({ send, frequency, canSend = () => true, now = ()
       k = e.length ? e[e.length - 1][1] : held ? 1 : 0;
       carried = e.length > 0;
       lastFlush = now();
-      send({ t: 'key', q: ++seq, n: streamMs(lastFlush), k, f: frequency(), e });
+      send({ t: 'key', q: ++seq, n: streamMs(lastFlush), k, f: frequency(), p: watts, e });
     } while (pending.length);
 
     // held: keep beating; just released: one more beat, so a lost key-up is repaired soon
@@ -50,6 +52,10 @@ export function createStreamer({ send, frequency, canSend = () => true, now = ()
   function key(on, at = now()) {
     if (on === held || (on && !canSend())) return;
     held = on;
+    if (on && power() !== watts) {
+      if (origin !== null && pending.length) flush();   // marks already keyed keep the power they had
+      watts = power();
+    }
     if (origin === null) return;
     lastT = Math.max(lastT, Math.min(streamMs(at), streamMs(now())));
     pending.push([lastT, on ? 1 : 0]);

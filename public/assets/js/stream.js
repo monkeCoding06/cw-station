@@ -11,6 +11,8 @@
  * up the change.
  */
 
+import { cleanWatts, DEFAULT_WATTS } from './signal.js';
+
 export const TIMING = {
   minDelay: 40,         // jitter buffer bounds in ms, before the user's latency
   maxDelay: 300,
@@ -40,8 +42,9 @@ export class StreamTimeline {
     this.arrivals = [];             // [arrival, arrival - n]
     this.lastArrival = null;
     this.staleSince = null;
-    this.queued = [];               // future transitions { at, on, f }
-    this.current = { at: -Infinity, on: 0, f: 0 };   // the latest one already reached
+    this.watts = DEFAULT_WATTS;     // transmit power of the last key-down scheduled
+    this.queued = [];               // future transitions { at, on, f, p }
+    this.current = { at: -Infinity, on: 0, f: 0, p: DEFAULT_WATTS };   // the latest one already reached
   }
 
   /** Feeds one packet. Returns { cancelFrom, add } for the audio: drop what is scheduled from cancelFrom on, then add these. */
@@ -50,6 +53,7 @@ export class StreamTimeline {
     const out = { cancelFrom: null, add: [] };
     if (packet.q <= this.q) return out;
     this.q = packet.q;
+    const p = cleanWatts(packet.p);   // older senders leave it out
 
     const off = arrival - packet.n;
     if (this.lastArrival !== null) this.jitter = Math.max(0, this.jitter - T.jitterDecay * (arrival - this.lastArrival));
@@ -96,13 +100,13 @@ export class StreamTimeline {
         at = Math.max(t + this.offset, arrival + T.lead, this.schedEnd);
         this.lastUpT = t;
       }
-      this.push(at, s, packet.f, out);
+      this.push(at, s, packet.f, p, out);
     }
 
     // the packet's own key state wins; this is how a lost key-up is repaired
     if (packet.k !== this.state) {
       if (packet.k === 0) this.lastUpT = packet.n;
-      this.push(Math.max(packet.n + this.offset, arrival + T.lead, this.schedEnd), packet.k, packet.f, out);
+      this.push(Math.max(packet.n + this.offset, arrival + T.lead, this.schedEnd), packet.k, packet.f, p, out);
     }
     return out;
   }
@@ -110,15 +114,18 @@ export class StreamTimeline {
   resync(arrival, desired, out) {
     const kept = this.queued.filter(x => x.at <= arrival);
     this.queued = kept;
-    this.state = kept.length ? kept[kept.length - 1].on : this.current.on;
+    const last = kept.length ? kept[kept.length - 1] : this.current;
+    this.state = last.on;
+    this.watts = last.p;
     this.schedEnd = arrival;
     this.offset = desired;
     this.lastUpT = null;
     out.cancelFrom = arrival;
   }
 
-  push(at, on, f, out) {
-    const transition = { at, on, f };
+  push(at, on, f, p, out) {
+    if (on) this.watts = p;
+    const transition = { at, on, f, p: this.watts };
     this.queued.push(transition);
     out.add.push(transition);
     this.state = on;
@@ -128,7 +135,7 @@ export class StreamTimeline {
   /** Keys up a stream that went quiet while held, or whose sender left. */
   keyUp(now) {
     const out = { cancelFrom: null, add: [] };
-    if (this.state === 1) this.push(Math.max(now + this.timing.lead, this.schedEnd), 0, this.current.f, out);
+    if (this.state === 1) this.push(Math.max(now + this.timing.lead, this.schedEnd), 0, this.current.f, this.watts, out);
     return out;
   }
 

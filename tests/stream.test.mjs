@@ -81,7 +81,27 @@ test('the first key-down goes out at once, with no duration', () => {
   clock.runUntil(100);
   s.key(true, 100);
   assert.equal(sent.length, 1);
-  assert.deepEqual(sent[0], { t: 'key', q: 1, n: 100, k: 1, f: 120, e: [[100, 1]], sentAt: 100 });
+  assert.deepEqual(sent[0], { t: 'key', q: 1, n: 100, k: 1, f: 120, p: 100, e: [[100, 1]], sentAt: 100 });
+});
+
+test('a power change applies from the next key-down, never inside a mark', () => {
+  const clock = simClock();
+  let watts = 100;
+  const { s, sent } = streamer(clock, { power: () => watts });
+  s.start(0);
+  clock.at(10, () => s.key(true, 10));
+  clock.at(60, () => { watts = 5; });            // turned down while the key is held
+  clock.at(70, () => s.key(false, 70));
+  clock.at(75, () => s.key(true, 75));            // same batch window as the key-up
+  clock.at(80, () => s.key(false, 80));
+  clock.runUntil(400);
+  const marks = [];
+  for (const packet of sent) for (const [t, on] of packet.e) if (on) marks.push([t, packet.p]);
+  assert.deepEqual(marks, [[10, 100], [75, 5]]);
+  // the key-up at 70 still went out at 100 W, before the 5 W key-down
+  const upAt70 = sent.find(packet => packet.e.some(([t]) => t === 70));
+  assert.equal(upAt70.p, 100);
+  assert.ok(sent.filter(packet => packet.q > upAt70.q).every(packet => packet.p === 5));
 });
 
 test('transitions inside the batch window share a packet and wait at most BATCH_MS', () => {
@@ -244,6 +264,16 @@ test('an initial key-down plays at once, before its length is known', () => {
   assert.equal(add[0].on, 1);
   assert.equal(add[0].f, 50);
   assert.ok(add[0].at >= 5000 + TIMING.lead && add[0].at <= 5000 + TIMING.minDelay + TIMING.lead);
+});
+
+test('transitions carry the power of their key-down; older senders count as 100 W', () => {
+  const timeline = new StreamTimeline();
+  const first = timeline.receive({ q: 1, n: 0, k: 0, f: 0, e: [[0, 1], [50, 0]] }, 5000).add;
+  assert.deepEqual(first.map(x => x.p), [100, 100]);
+  const second = timeline.receive({ q: 2, n: 200, k: 0, f: 0, p: 1, e: [[100, 1], [150, 0]] }, 5200).add;
+  assert.deepEqual(second.map(x => x.p), [1, 1]);
+  const third = timeline.receive({ q: 3, n: 300, k: 1, f: 0, p: 7, e: [[300, 1]] }, 5300).add;
+  assert.deepEqual(third.map(x => x.p), [100]);
 });
 
 test('steady network: every mark and space keeps its keyed length, delay is constant', () => {
