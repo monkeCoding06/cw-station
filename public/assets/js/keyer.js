@@ -368,15 +368,61 @@ function onKeyerModeChange() {
   $('padDit').setAttribute('aria-label', straight ? 'Straight key' : 'Dit');
 }
 
+/* Lock mode: the page ignores everything except the keyer and the unlock button. */
+let locked = false;
+
+function setLocked(on) {
+  if (locked === on) return;
+  locked = on;
+  stopKeyer();
+  document.body.classList.toggle('keyer-locked', on);
+  $('lockToggle').textContent = on ? 'Unlock (Esc)' : 'Lock';
+  $('lockToggle').setAttribute('aria-pressed', String(on));
+  if (on) {
+    document.activeElement?.blur?.();
+    enableAudio();
+  }
+}
+
+const onLockToggle = el => !!el.closest('#lockToggle');
+
+function initLock() {
+  $('lockToggle').onclick = () => setLocked(!locked);
+
+  // Touch: left half of the screen is dit, right half is dah.
+  // Mobile browsers report a second mouse button only as a pointer event, never as a mousedown.
+  const mouseState = e => {
+    if (!locked || e.pointerType !== 'mouse' || !inputEnabled || onLockToggle(e.target)) return;
+    const buttons = e.buttons & 3;
+    if (buttons === mouseButtons) return;
+    mouseButtons = buttons;
+    tracking = !!buttons;
+    if (buttons) enableAudio();
+    refreshPaddles();
+  };
+  for (const type of ['pointerdown', 'pointermove', 'pointerup']) window.addEventListener(type, mouseState);
+
+  window.addEventListener('pointerdown', e => {
+    if (!locked || e.pointerType === 'mouse' || !inputEnabled || onLockToggle(e.target)) return;
+    e.preventDefault();
+    touches.set(e.pointerId, e.clientX < innerWidth / 2 ? DIT : DAH);
+    refreshPaddles();
+  });
+  const release = e => { if (touches.delete(e.pointerId)) refreshPaddles(); };
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+}
+
 export function initKeyer() {
   initTouchKey();
+  initLock();
 
   window.addEventListener('contextmenu', e => {
-    if (inputEnabled && (tracking || isKeySurface(e.target))) e.preventDefault();
+    if (locked || (inputEnabled && (tracking || isKeySurface(e.target)))) e.preventDefault();
   });
 
   window.addEventListener('mousedown', e => {
-    const ignored = !inputEnabled || e.button > 2 || e.button === 1 || (!tracking && !isKeySurface(e.target));
+    const ignored = !inputEnabled || e.button > 2 || e.button === 1 || (!tracking && !locked && !isKeySurface(e.target)) || onLockToggle(e.target);
     if (ignored) return;
     e.preventDefault();
     enableAudio();
@@ -393,6 +439,7 @@ export function initKeyer() {
   });
 
   window.addEventListener('keydown', e => {
+    if (locked && e.code === 'Escape') setLocked(false);
     if (!inputEnabled || e.ctrlKey || e.metaKey || e.altKey) return;
 
     if (e.code === 'Space') {

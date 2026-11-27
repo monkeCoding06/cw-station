@@ -263,6 +263,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
         <label data-rooms="general echo practice"><span class="legend">Speed <output id="speedOut"></output></span>
           <input type="range" id="speed" min="5" max="40" value="16">
         </label>
+        <button id="lockToggle" class="lock-btn" type="button" aria-pressed="false" title="Lock the page: everything stops reacting and the screen acts as the keyer">Lock</button>
         <button id="moreToggle" class="more-btn" type="button" aria-expanded="false">More</button>
         <div class="more">
           <label><span class="legend">Sidetone <output id="pitchOut"></output></span>
