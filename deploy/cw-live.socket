@@ -1,0 +1,12 @@
+[Unit]
+Description=CW Station live CW socket (WebSocket, proxied by Caddy at /live)
+
+[Socket]
+ListenStream=/run/cw-live.sock
+FileDescriptorName=live
+Service=cw-chat.service
+SocketMode=0660
+SocketGroup=caddy
+
+[Install]
+WantedBy=sockets.target

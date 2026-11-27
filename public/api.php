@@ -50,35 +50,6 @@ function require_user(): string
     return $user;
 }
 
-/** Checks a transmission: decoded text plus key-down/key-up durations in milliseconds. */
-function validate_transmission(array $body): array
-{
-    $text = $body['text'] ?? '';
-    if (!is_string($text) || preg_match('/^[A-Z0-9 .,?\/=+\-\x{25A1}]{0,120}$/u', $text) !== 1) {
-        throw new ApiError(400, 'Invalid text');
-    }
-
-    // marks alternate key-down, key-up, key-down ... so the count is odd
-    $marks = $body['marks'] ?? null;
-    $valid = is_array($marks) && array_is_list($marks) && count($marks) >= 1
-        && count($marks) <= 199 && count($marks) % 2 === 1;
-    foreach ($valid ? $marks : [] as $ms) {
-        $valid = $valid && is_int($ms) && $ms >= 1 && $ms <= 5000;
-    }
-    $lead = $body['lead'] ?? 0;
-    if (!$valid || !is_int($lead) || $lead < 0 || $lead > 5000) {
-        throw new ApiError(400, 'Invalid timing');
-    }
-
-    // frequency offset in Hz from 7.030 MHz, matching the tuning range of the rig
-    $freq = $body['freq'] ?? 0;
-    if (!is_int($freq) || $freq < -10000 || $freq > 10000) {
-        throw new ApiError(400, 'Invalid frequency');
-    }
-
-    return ['text' => $text, 'marks' => $marks, 'lead' => $lead, 'freq' => $freq];
-}
-
 function handle_login(): never
 {
     $body = read_post_body();
@@ -308,26 +279,9 @@ function handle_log_delete(): never
     respond(['ok' => true]);
 }
 
-/** Dispatch validated, authenticated traffic to a channel-specific live subscription. */
-function handle_live(string $channel, string $action): never
+/** One request to the private relay socket. */
+function relay_request(array $request): array
 {
-    $body = read_post_body();
-    $user = require_user();
-    $view = $body['view'] ?? null;
-    if (!is_string($view) || !preg_match('/^[a-f0-9-]{36}$/D', $view)) {
-        throw new ApiError(400, 'Invalid station view');
-    }
-    $request = ['channel' => $channel, 'action' => $action, 'call' => $user, 'view' => $view];
-    if ($channel === 'cw' && $action === 'send') {
-        $request['transmission'] = validate_transmission($body);
-    } elseif ($action === 'send') {
-        $text = trim(is_string($body['text'] ?? null) ? $body['text'] : '');
-        if (!preg_match('/^[^\x00-\x1f\x7f]{1,200}$/uD', $text)) {
-            throw new ApiError(400, 'A message needs 1-200 characters');
-        }
-        $request['text'] = $text;
-    }
-
     $socket = @stream_socket_client('unix:///run/cw-chat.sock', $errno, $error, 2);
     if (!$socket) {
         throw new ApiError(503, 'Station relay is offline');
@@ -342,10 +296,36 @@ function handle_live(string $channel, string $action): never
     if (!$line) {
         throw new ApiError(503, 'Station relay did not respond');
     }
-    $reply = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
-    if ($channel === 'cw' && $action === 'poll' && isset($reply['messages'])) {
-        $reply['online'] = online_callsigns();
+    return json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+}
+
+/** Dispatch validated, authenticated chat traffic to the live subscription of one view. */
+function handle_live(string $channel, string $action): never
+{
+    $body = read_post_body();
+    $user = require_user();
+    $view = $body['view'] ?? null;
+    if (!is_string($view) || !preg_match('/^[a-f0-9-]{36}$/D', $view)) {
+        throw new ApiError(400, 'Invalid station view');
     }
+    $request = ['channel' => $channel, 'action' => $action, 'call' => $user, 'view' => $view];
+    if ($action === 'send') {
+        $text = trim(is_string($body['text'] ?? null) ? $body['text'] : '');
+        if (!preg_match('/^[^\x00-\x1f\x7f]{1,200}$/uD', $text)) {
+            throw new ApiError(400, 'A message needs 1-200 characters');
+        }
+        $request['text'] = $text;
+    }
+    $reply = relay_request($request);
+    respond($reply, $reply['status'] ?? 200);
+}
+
+/** A short-lived, single-use ticket that lets this browser open the live CW connection as the signed-in callsign. */
+function handle_live_ticket(): never
+{
+    read_post_body();
+    $user = require_user();
+    $reply = relay_request(['action' => 'ticket', 'call' => $user]);
     respond($reply, $reply['status'] ?? 200);
 }
 
@@ -374,10 +354,8 @@ try {
         'qsl_inbox' => handle_qsl_inbox(),
         'qsl_seen' => handle_qsl_seen(),
         'qsl_delete' => handle_qsl_delete(),
-        'cw_join' => handle_live('cw', 'join'),
-        'cw_poll' => handle_live('cw', 'poll'),
-        'cw_send' => handle_live('cw', 'send'),
-        'cw_leave' => handle_live('cw', 'leave'),
+        'live_ticket' => handle_live_ticket(),
+        'cw_join', 'cw_poll', 'cw_send', 'cw_leave' => throw new ApiError(410, 'Live CW moved to the station connection. Reload the page.'),
         default => throw new ApiError(404, 'Unknown action'),
     };
 } catch (ApiError $e) {

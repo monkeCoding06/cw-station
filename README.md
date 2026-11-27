@@ -18,13 +18,14 @@ Live CW and chat are relayed in memory and are not stored.
 
 ## Stack
 
-PHP 8.4 and SQLite for accounts, sessions and logbooks, a small Python relay for live traffic over a Unix socket, and plain JavaScript in the browser. Production runs on Debian with Caddy.
+PHP 8.4 and SQLite for accounts, sessions and logbooks, a small Python relay for live traffic (chat over a private Unix socket, live CW over a same-origin WebSocket at `/live` that Caddy proxies to a second Unix socket; needs `python3-websockets`), and plain JavaScript in the browser. Production runs on Debian with Caddy.
 
 ## Layout
 
 - `public/`: the web root (page, API and browser code)
 - `src/`: application state and the chat relay
-- `deploy/`: systemd socket and service units
+- `deploy/`: systemd socket and service units, and the Caddy snippet for `/live`
+- `tests/`: relay tests (`python3 -m unittest discover tests`) and browser-logic tests (`node --test tests/`)
 
 ## Feedback
 

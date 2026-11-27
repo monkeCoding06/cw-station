@@ -1,0 +1,4 @@
+# Goes inside the existing cw-station site block. Caddy runs handle before php_fastcgi and file_server.
+handle /live {
+	reverse_proxy unix//run/cw-live.sock
+}

@@ -35,8 +35,11 @@ class ApiError extends RuntimeException
 /** The page loads only its own scripts and styles; nothing inline, nothing external. */
 function send_security_headers(): void
 {
+    // older Safari does not count wss:// as 'self', so the live CW socket is listed explicitly
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    $live = preg_match('/^[a-z0-9.-]+(:[0-9]{1,5})?$/iD', $host) === 1 ? " wss://$host" : '';
     header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; "
-        . "img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+        . "img-src 'self'; connect-src 'self'$live; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: no-referrer');

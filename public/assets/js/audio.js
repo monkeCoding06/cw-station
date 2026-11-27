@@ -85,14 +85,28 @@ export function playRuns(runs, delayMs = 0, hz = +$('pitch').value, destination 
   return { tone, end: performance.now() + (time - audio.currentTime) * 1000 };
 }
 
+let clockOffset = null;   // audio clock minus performance clock, in seconds
+
+/**
+ * The AudioContext time rendered at a performance.now() moment; it is heard
+ * outputLatencyMs() later. currentTime only advances once per render block, so the highest recent
+ * reading is the closest one; it is allowed to drift slowly with the clocks.
+ */
+export function audioTimeAt(perfMs) {
+  const sample = audio.currentTime - performance.now() / 1000;
+  const stale = clockOffset === null || clockOffset - sample > .05;   // also after the context was suspended
+  clockOffset = stale ? sample : Math.max(sample, clockOffset - .0005);
+  return Math.max(audio.currentTime, clockOffset + perfMs / 1000);
+}
+
+/** How long, in ms, the device takes to make scheduled audio audible. */
+export const outputLatencyMs = () => audio ? ((audio.outputLatency || 0) + (audio.baseLatency || 0)) * 1000 : 0;
+
 export function stopAllVoices() {
   for (const tone of voices) {
     try { tone.stop(); } catch {}
   }
 }
-
-/** Key-down/key-up durations, alternating and starting with a key-down. */
-export const marksToRuns = marks => marks.map((ms, i) => [i % 2 === 0, ms]);
 
 /** A keying string ('1' down, '0' up per unit) as runs. */
 export const keyingToRuns = (keying, unit) => keying.match(/1+|0+/g).map(run => [run[0] === '1', run.length * unit]);

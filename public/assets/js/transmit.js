@@ -1,57 +1,93 @@
-import { getDecodedText } from './keyer.js';
-
 /*
- * Turns what the operator keys into transmissions: one per finished word,
- * with the decoded text and the exact key-down/key-up timing.
+ * Streams what the operator keys, transition by transition, while it happens.
+ * Nothing waits for a letter, a word or the paddle to be released: the first
+ * transition goes out at once, later ones within BATCH_MS, and while the key
+ * is held a heartbeat tells receivers the sender is still there.
  *
- * A transmission is { text, lead, marks, freq }:
- *   marks - alternating key-down / key-up durations in ms, starting and ending with key-down
- *   lead  - silence in ms between the end of the previous transmission and this one
- *   freq  - transmit frequency, as Hz offset from 7.030 MHz
+ * A packet is { t: 'key', q, n, k, f, e }:
+ *   q - sequence number, 1, 2, 3 ... per connection
+ *   n - when it was sent, in ms since the stream started (the sender's clock only)
+ *   k - key state at n: 1 down, 0 up
+ *   f - transmit frequency, as Hz offset from 7.030 MHz
+ *   e - transitions since the previous packet: [[t, state], ...], t in stream ms
  */
 
-const MAX_MS = 5000;
-const MAX_MARKS = 199;
-const MAX_TEXT = 120;
+export const BATCH_MS = 15;
+export const HEARTBEAT_MS = 250;
+export const MAX_EVENTS = 64;
 
-const clampMs = ms => Math.max(1, Math.min(MAX_MS, Math.round(ms)));
+/** Returns { key, start, stop, release }. `send(packet)` gets each packet; nothing is sent before start(). */
+export function createStreamer({ send, frequency, canSend = () => true, now = () => performance.now(), timers = globalThis }) {
+  let origin = null;        // performance.now() at stream start, null while there is no stream
+  let seq = 0;
+  let held = false;
+  let pending = [];
+  let lastFlush = -Infinity;
+  let lastT = 0;            // stream times must never run backwards or ahead of the packet
+  let flushTimer = null;
+  let beatTimer = null;
 
-/** Returns keyer hooks (key, word, clear) that call `send(transmission)`. */
-export function createTransmitter(send, getFrequency) {
-  let marks = [];
-  let lead = 0;
-  let freq = 0;
-  let lastChange = 0;
-  let lastKeyUp = null;
-  let sentChars = 0;        // how much of the decoded text was already sent
+  const streamMs = at => Math.max(0, Math.round(at - origin));
+
+  function flush() {
+    timers.clearTimeout(flushTimer);
+    flushTimer = null;
+    if (origin === null) return;
+    let k, carried;
+    do {
+      const e = pending.splice(0, MAX_EVENTS);
+      k = e.length ? e[e.length - 1][1] : held ? 1 : 0;
+      carried = e.length > 0;
+      lastFlush = now();
+      send({ t: 'key', q: ++seq, n: streamMs(lastFlush), k, f: frequency(), e });
+    } while (pending.length);
+
+    // held: keep beating; just released: one more beat, so a lost key-up is repaired soon
+    timers.clearTimeout(beatTimer);
+    beatTimer = k === 1 || carried ? timers.setTimeout(flush, HEARTBEAT_MS) : null;
+  }
+
+  function key(on, at = now()) {
+    if (on === held || (on && !canSend())) return;
+    held = on;
+    if (origin === null) return;
+    lastT = Math.max(lastT, Math.min(streamMs(at), streamMs(now())));
+    pending.push([lastT, on ? 1 : 0]);
+    if (flushTimer !== null) return;
+    const wait = lastFlush + BATCH_MS - now();
+    if (wait <= 0) flush();
+    else flushTimer = timers.setTimeout(flush, wait);
+  }
 
   return {
-    key(on, now) {
-      if (on && marks.length === 0) {
-        lead = lastKeyUp === null ? 0 : clampMs(now - lastKeyUp);
-        freq = getFrequency();
-      } else {
-        marks.push(clampMs(now - lastChange));    // the gap before this press, or the press itself
+    key,
+
+    /** A new connection: a new stream. A key already held goes out at once. */
+    start(at = now()) {
+      stop();
+      origin = at;
+      if (held) {
+        pending.push([0, 1]);
+        flush();
       }
-      if (!on) lastKeyUp = now;
-      lastChange = now;
     },
 
-    word() {
-      const decoded = getDecodedText();
-      const text = decoded.slice(sentChars).trim().slice(0, MAX_TEXT);
-      sentChars = decoded.length;
-      if (marks.length === 0) return;
+    stop,
 
-      const transmission = { text, lead, freq, marks: marks.slice(0, MAX_MARKS) };
-      marks = [];
-      send(transmission);
-    },
-
-    clear() {
-      marks = [];
-      sentChars = 0;
-      lastKeyUp = null;
+    /** Lets go of the key, e.g. when the receiver is switched off mid-mark. */
+    release(at = now()) {
+      key(false, at);
     },
   };
+
+  function stop() {
+    timers.clearTimeout(flushTimer);
+    timers.clearTimeout(beatTimer);
+    flushTimer = beatTimer = null;
+    origin = null;
+    seq = 0;
+    pending = [];
+    lastFlush = -Infinity;
+    lastT = 0;
+  }
 }
