@@ -7,7 +7,7 @@ import { connectLive } from './live.js';
 import { createReceiver } from './playback.js';
 import { createStreamer } from './transmit.js';
 import { cleanWatts, pathBetween } from './signal.js';
-import { isPowered, offsetKHz, resetBand, tuneOffset, update as updateRig } from './rig.js';
+import { isPowered, offsetKHz, resetBand, setBandActivity, tuneOffset, update as updateRig } from './rig.js';
 
 /*
  * The General room (shared band, live over the station connection), the Echo
@@ -44,6 +44,7 @@ export function initRooms(callsign) {
 export function enterRoom(name) {
   room = name;
   resetBand();
+  setBandActivity(name === 'general' ? me : null);
 
   if (name === 'general') {
     receiver = createReceiver({ pathTo: call => pathBetween(me, call) });
@@ -74,6 +75,7 @@ export function leaveRoom() {
   receiver?.clear();
   live = streamer = receiver = null;
   room = null;
+  setBandActivity(null);
   $('cwConnection').textContent = '';
   clearInterval(tickTimer);
   stopAllVoices();

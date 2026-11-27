@@ -19,6 +19,7 @@ export function openCallMenu(call, anchor) {
   if (!menu.hidden && menu.dataset.call === call) return closeMenu();
   menu.dataset.call = call;
   menu.replaceChildren(
+    h('button', { type: 'button', class: 'x-close', 'aria-label': 'Close menu', onclick: closeMenu }, '×'),
     h('button', { type: 'button', onclick: () => { closeMenu(); viewRig(call, anchor); } }, 'View profile'),
     h('button', { type: 'button', onclick: () => { closeMenu(); openQslFor(call); } }, 'Send QSL'),
   );
@@ -26,7 +27,7 @@ export function openCallMenu(call, anchor) {
   const rect = anchor.getBoundingClientRect();
   menu.style.left = Math.max(4, Math.min(rect.left, innerWidth - menu.offsetWidth - 4)) + 'px';
   menu.style.top = Math.min(rect.bottom + 2, innerHeight - menu.offsetHeight - 4) + 'px';
-  menu.querySelector('button').focus();
+  menu.querySelector('button:not(.x-close)').focus();
 }
 
 function miniRig(call, rig) {
@@ -53,7 +54,7 @@ async function viewRig(call, anchor) {
   const overlay = $('rigView');
   const body = h('div', {}, h('small', { role: 'status' }, 'Loading…'));
   overlay.replaceChildren(h('div', { class: 'dialog', role: 'dialog', 'aria-label': `Rig of ${call}` },
-    h('div', { class: 'sheet-head' }, h('strong', {}, call), h('button', { type: 'button', onclick: closeView }, 'Close')),
+    h('div', { class: 'sheet-head' }, h('strong', {}, call), h('button', { type: 'button', class: 'x-close', 'aria-label': 'Close', onclick: closeView }, '×')),
     body));
   overlay.hidden = false;
   overlay.querySelector('button').focus();

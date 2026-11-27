@@ -1263,3 +1263,35 @@ input[type=color] { width: 2.4rem; height: 2rem; padding: 0; background: none; b
 body.keyer-locked { touch-action: none; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
 body.keyer-locked * { pointer-events: none !important; }
 body.keyer-locked #lockToggle { pointer-events: auto !important; position: fixed; top: .5rem; right: .5rem; z-index: 1000; color: var(--accent); border-color: var(--accent); }
+
+/* ---------- Close buttons on menus and overlays ---------- */
+.x-close {
+  display: inline-grid; place-items: center; flex: none;
+  width: 2.5rem; height: 2.5rem; min-height: 2.5rem; margin-left: auto; padding: 0;
+  background: #0e0e0d; border: 1px solid var(--panel-edge); border-radius: 50%;
+  color: var(--print); font: 400 1.45rem/1 system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+}
+.x-close:hover, .x-close:focus-visible { border-color: var(--accent); color: var(--print); }
+.sheet button.x-close, .dialog button.x-close, .menu button.x-close { padding: 0; border-radius: 50%; color: var(--print); }
+.sheet-head { position: sticky; top: -.8rem; z-index: 2; margin: -.8rem -.8rem 0; padding: .8rem .8rem .4rem; background: #171716; }
+.menu .x-close { justify-self: end; width: 2.5rem; height: 2.5rem; min-height: 2.5rem; margin: .1rem; border: 1px solid var(--panel-edge); text-align: center; }
+.more-close, .ref-close { display: none; }
+
+@media (max-width: 600px), (orientation: landscape) and (max-height: 559px) and (pointer: coarse) {
+  .who { min-width: 0; }
+  .who > * { flex: 0 1 auto; min-width: 0; }
+  .who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who button, .who .report { overflow: hidden; white-space: nowrap; }
+  .settings.more-open .more { overflow-y: auto; overscroll-behavior: contain; }
+  .settings.more-open .more-close { display: grid; position: sticky; top: 0; z-index: 1; grid-column: 1 / -1; justify-self: end; margin: -.3rem -.3rem -.2rem auto; }
+  #chatClose { display: grid; padding: 0; width: 2.5rem; height: 2.5rem; border-radius: 50%; font: 400 1.45rem/1 system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
+  .side details[open] .ref-close { display: grid; position: sticky; top: -.7rem; z-index: 1; grid-column: 1 / -1; justify-self: end; margin: -.3rem -.3rem 0 auto; }
+  .chat-box { max-height: calc(100dvh - 1rem); }
+  .dialog { max-height: calc(100dvh - 1.6rem); overscroll-behavior: contain; }
+  .sheet { overscroll-behavior: contain; }
+}
+@media (max-width: 420px) {
+  .who { gap: .2rem; }
+  .who button, .who .report { padding: .15rem .35rem; font-size: .7rem; }
+  .who strong { font-size: .78rem; }
+}

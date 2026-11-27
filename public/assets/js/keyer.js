@@ -23,6 +23,8 @@ let inputEnabled = true;
 let keyDown = false;
 let keyDownAt = 0;
 let keyUpAt = null;
+let keyedMs = 0;            // key-down time not yet collected by takeKeyedMs()
+let keyedFrom = 0;
 let keyingUnit = unitMs;
 export function setKeyingSpeed(source = unitMs) { keyingUnit = source; }
 let markUnit;               // unit length (ms) captured when the current mark began
@@ -31,6 +33,17 @@ let decodedText = '';
 let letterTimer, wordTimer;
 
 export const isKeyDown = () => keyDown;
+
+/** How long the key was down since the last call, so a display tick can draw marks and spaces at any speed. */
+export function takeKeyedMs(now = performance.now()) {
+  let ms = keyedMs;
+  if (keyDown) {
+    ms += now - keyedFrom;
+    keyedFrom = now;
+  }
+  keyedMs = 0;
+  return ms;
+}
 export const getDecodedText = () => decodedText;
 
 export function setInputEnabled(enabled) {
@@ -70,6 +83,8 @@ function setKey(on) {
   if (keyDown === on) return;
   keyDown = on;
   const now = performance.now();
+  if (on) keyedFrom = now;
+  else keyedMs += now - keyedFrom;
   $('pad').classList.toggle('on', on);
   document.body.classList.toggle('tx', on);
   setSidetone(on);
@@ -255,7 +270,7 @@ function initTouchKey() {
     const button = $(id);
 
     button.addEventListener('pointerdown', e => {
-      if (e.pointerType === 'mouse' || !inputEnabled) return;
+      if (e.pointerType === 'mouse' || !inputEnabled || menuOpen()) return;
       e.preventDefault();             // also stops the emulated mouse events
       button.setPointerCapture(e.pointerId);
       enableAudio();
@@ -358,6 +373,9 @@ function isKeySurface(el) {
   return el.closest('main') && (el.closest('#pad') || !el.closest(NON_KEY_ELEMENTS));
 }
 
+// a press that only dismisses an open menu never keys the rig
+const menuOpen = () => !!document.querySelector('#callMenu:not([hidden]), .settings.more-open');
+
 const isFormControl = el => /INPUT|SELECT|SUMMARY|BUTTON|TEXTAREA/.test(el.tagName) && !el.closest('#pad');
 
 function onKeyerModeChange() {
@@ -422,7 +440,7 @@ export function initKeyer() {
   });
 
   window.addEventListener('mousedown', e => {
-    const ignored = !inputEnabled || e.button > 2 || e.button === 1 || (!tracking && !locked && !isKeySurface(e.target)) || onLockToggle(e.target);
+    const ignored = !inputEnabled || e.button > 2 || e.button === 1 || (!tracking && !locked && (!isKeySurface(e.target) || menuOpen())) || onLockToggle(e.target);
     if (ignored) return;
     e.preventDefault();
     enableAudio();

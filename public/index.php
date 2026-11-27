@@ -280,6 +280,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
         <button id="lockToggle" class="lock-btn" type="button" aria-pressed="false" title="Lock the page: everything stops reacting and the screen acts as the keyer">Lock</button>
         <button id="moreToggle" class="more-btn" type="button" aria-expanded="false">More</button>
         <div class="more">
+          <button id="moreClose" class="x-close more-close" type="button" aria-label="Close settings">×</button>
           <label><span class="legend">Sidetone <output id="pitchOut"></output></span>
             <input type="range" id="pitch" min="350" max="950" step="10" value="600">
           </label>
@@ -306,7 +307,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
       <ul id="onlineList"></ul>
       <button id="chatToggle" type="button" aria-expanded="false" aria-controls="chatBox">Chat</button>
       <div id="chatBox" class="chat-box">
-        <h2 class="chat-title">Chat <button id="chatPing" type="button" aria-pressed="false" title="Play a ping when someone else writes">Ping off</button><button id="chatClose" type="button">Close</button></h2>
+        <h2 class="chat-title">Chat <button id="chatPing" type="button" aria-pressed="false" title="Play a ping when someone else writes">Ping off</button><button id="chatClose" class="x-close" type="button" aria-label="Close chat">×</button></h2>
         <ol id="chatLog" aria-live="polite"></ol>
         <form id="chatForm" autocomplete="off">
           <input id="chatText" disabled type="text" maxlength="200" placeholder="Say something" aria-label="Chat message">
@@ -318,7 +319,7 @@ $rigAttrs = rig_attributes($rig ?? default_rig());
 
     <details data-nokey>
       <summary>Morse chart</summary>
-      <div class="ref" id="ref"></div>
+      <div class="ref" id="ref"><button id="refClose" class="x-close ref-close" type="button" aria-label="Close Morse chart">×</button></div>
     </details>
   </div>
 

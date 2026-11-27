@@ -1,4 +1,4 @@
-import { displayLevel } from './signal.js';
+import { LEVEL } from './signal.js';
 
 /*
  * The band recorder behind the waterfall.
@@ -8,6 +8,10 @@ import { displayLevel } from './signal.js';
  * frequency and time. The waterfall on screen is only a 2 kHz window moved over
  * this history, so tuning away and back finds the old traces where they were,
  * aged by the time spent away.
+ *
+ * Rows are on a dB scale like a panadapter: the noise floor sits low and steady,
+ * a signal is as bright as it is far above the noise, so a QRP station near the
+ * floor is a faint trace and a loud one is bright.
  */
 
 export const SPAN_HZ = 2000;      // width of the visible window
@@ -21,7 +25,7 @@ export const ROWS = 150;
 const ROW_MS = 25;                // one row per receiver tick; rows are added by elapsed time, so the scale does not depend on frame rate
 
 const rows = Array.from({ length: ROWS }, () => new Uint8Array(BINS));
-const held = new Float32Array(BINS);    // strongest keyed signal since the last row
+const held = new Float32Array(BINS);    // strongest keyed signal power since the last row, noise = 1
 const frame = new Float32Array(BINS);
 let newest = 0;                   // index in `rows` of the latest row
 let stored = 0;                   // how many rows hold real history
@@ -82,12 +86,17 @@ export function setPalette(display) {
 setPalette(defaultDisplay());
 const BACKGROUND = 0xff000000;    // empty, never recorded: pure black, darker than any noise row
 
-// A keyed CW signal: a bright narrow core with softer skirts.
+// A keyed CW signal: a bright narrow core with softer skirts, as power.
 const KERNEL_BINS = 100;
 const kernel = Float32Array.from({ length: KERNEL_BINS + 1 }, (_, k) => {
   const hz = k * BIN_HZ;
-  return .85 * Math.exp(-(hz * hz) / 72) + .2 * Math.exp(-(hz * hz) / 800);
+  return ((.85 * Math.exp(-(hz * hz) / 72) + .2 * Math.exp(-(hz * hz) / 800)) / 1.05) ** 2;
 });
+
+const BIN_SNR_DB = 40;     // a 0 dB station stands this far above the noise in one bin
+const FLOOR_DB = -8;       // bottom of the colour scale, relative to the mean noise
+const RANGE_DB = 50;
+const OWN_DB = 6;          // our own 100 W transmitter, seen on our own display
 
 // Band noise: a gently uneven floor across frequency, and exponential grain so a few cells flash brighter.
 const phases = [Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28];
@@ -115,23 +124,28 @@ export function latest(out, startOffset) {
   return true;
 }
 
-function paint(target, centre, amp) {
+function paint(target, centre, db, duty = 1) {
+  const power = 10 ** ((db + BIN_SNR_DB) / 10) * duty;
   for (let k = -KERNEL_BINS; k <= KERNEL_BINS; k++) {
     const b = centre + k;
-    if (b >= 0 && b < BINS) target[b] += amp * kernel[Math.abs(k)];
+    if (b >= 0 && b < BINS) target[b] += power * kernel[Math.abs(k)];
   }
 }
 
+const levelOf = s => (s.db === undefined ? 20 * Math.log10(Math.max(1e-6, s.amp) / LEVEL) : s.db);
+
 /**
- * Listens to the whole band. `signals` is [{ offset, amp }] keyed right now; offsets are RF
- * frequencies, so the receiver's sidetone pitch never moves a trace. While we transmit we
- * hear nothing, and our own tone shows at `ownOffset`. Rows are added for the time that has
- * passed since the last one, however often this is called.
+ * Listens to the whole band. `signals` is [{ offset, db or amp, duty? }] keyed since the last
+ * call; `duty` is the part of that time the key was down. Offsets are RF frequencies, so the
+ * receiver's sidetone pitch never moves a trace. `noiseDb` lifts the whole floor (band noise,
+ * static crashes). `own` is our transmitter, { offset, db, duty } relative to 100 W, or null.
+ * Keying only adds that trace: the floor and scale never depend on it, so rows don't flash.
+ * Rows are added for the time that has passed since the last one, however often this is called.
  */
-export function record(signals, { rfGain, listening, ownOffset, now }) {
+export function record(signals, { rfGain, own = null, now, noiseDb = 0 }) {
   frame.fill(0);
-  if (listening) for (const s of signals) paint(frame, binOf(s.offset), s.db === undefined ? s.amp : displayLevel(s.db));
-  if (ownOffset !== null) paint(frame, binOf(ownOffset), 1);
+  for (const s of signals) paint(frame, binOf(s.offset), levelOf(s), s.duty ?? 1);
+  if (own && own.duty > 0) paint(frame, binOf(own.offset), OWN_DB + own.db, own.duty);
   for (let b = 0; b < BINS; b++) if (frame[b] > held[b]) held[b] = frame[b];
 
   if (lastRowAt === null || now - lastRowAt > 1000) lastRowAt = now - ROW_MS;    // first call, or the tab was suspended
@@ -139,15 +153,19 @@ export function record(signals, { rfGain, listening, ownOffset, now }) {
   if (due < 1) return;
   lastRowAt += due * ROW_MS;
 
-  const gain = listening ? Math.sqrt(Math.min(rfGain, 4)) : 1;    // the display saturates long before the audio does
+  // RF gain brightens noise and signals alike; the display saturates long before the audio does
+  const shiftDb = Math.min(12, 20 * Math.log10(rfGain)) / 2;
   const drift = 1 + .07 * Math.sin(now / 6700) + .05 * Math.sin(now / 2300 + 1.3);
+  const noise = 10 ** (noiseDb / 10);
+  const offset = shiftDb - FLOOR_DB;
   for (let i = 0; i < due; i++) {
     newest = (newest + 1) % ROWS;
     const row = rows[newest];
-    const level = drift * (.93 + .14 * Math.random());
+    const level = noise * drift * (.93 + .14 * Math.random());
     for (let b = 0; b < BINS; b++) {
-      const v = (held[b] + .06 * level * floorProfile[b] * (1 + GRAIN[(Math.random() * 1024) | 0])) * gain;
-      row[b] = v >= 1 ? 255 : (v * 255) | 0;
+      const power = level * floorProfile[b] * GRAIN[(Math.random() * 1024) | 0] + held[b];
+      const v = (10 * Math.log10(power) + offset) / RANGE_DB;
+      row[b] = v >= 1 ? 255 : v <= 0 ? 0 : (v * 255) | 0;
     }
     stored = Math.min(ROWS, stored + 1);
     added++;

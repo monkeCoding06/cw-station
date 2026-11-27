@@ -230,7 +230,7 @@ export function initQsl() {
   panel.replaceChildren(h('div', { class: 'dialog', role: 'dialog', 'aria-label': 'QSL cards' },
     h('div', { class: 'sheet-head' },
       h('div', { class: 'tabs' }, Object.values(panel.tabButtons)),
-      h('button', { type: 'button', onclick: closePanel }, 'Close')),
+      h('button', { type: 'button', class: 'x-close', 'aria-label': 'Close', onclick: closePanel }, '×')),
     body));
   isolateKeys(panel);
   panel.addEventListener('keydown', event => { if (event.key === 'Escape') closePanel(); });

@@ -1,23 +1,26 @@
 import { $ } from './util.js';
 import { audioContext, audioTimeAt, outputLatencyMs, receiveLatencyMs } from './audio.js';
-import { filterGain, receiverInput, tuneOffset } from './rig.js';
+import { passband, receiverInput, tuneOffset } from './rig.js';
 import { StreamTimeline } from './stream.js';
-import { dbToAmp, fadeDb, FLAT_PATH, steadyDb } from './signal.js';
+import { dbToAmp, FLAT_PATH, pathDb, steadyDb } from './signal.js';
 
 /*
  * Plays remote key streams on the receiver. Each stream has one oscillator for
  * its whole life, keyed by gain automation, so a held key is just a held
  * gain. Audio, waterfall, signal meter and scan all read the same timeline,
  * and the same received level: power and path set the keyed gain at each
- * key-down, fading moves the level gain slowly underneath.
+ * key-down; fading, band conditions and the receive filter move the level
+ * gain smoothly underneath, also in the middle of a held mark.
  */
 
 const RAMP = .002;            // time constant of the key envelope, s
 const MAX_STREAMS = 32;
 const ACTIVE_FOR_MS = 1200;   // a station counts as mid-transmission this long after a key-up
 const FORGET_AFTER_MS = 30000;
+const LEVEL_TC = .03;         // s; fades and tuning glide instead of stepping
 
-const toneHz = f => Math.max(25, +$('pitch').value + f - tuneOffset());
+// A station above the dial beats higher; one below zero beat folds back as the (rejected) image.
+const toneHz = f => Math.max(20, Math.abs(+$('pitch').value + f - tuneOffset()));
 
 /** `pathTo(call)` gives the path from a station to us; without it every station arrives over a clean path. */
 export function createReceiver({ fixedDelay = null, pathTo = null } = {}) {
@@ -32,10 +35,10 @@ export function createReceiver({ fixedDelay = null, pathTo = null } = {}) {
     tone.frequency.value = toneHz(f);
     envelope.gain.value = 0;
     const path = pathTo && call ? pathTo(call) : FLAT_PATH;
-    level.gain.value = filterGain(f - tuneOffset()) * 10 ** (fadeDb(path, Date.now()) / 20);
+    level.gain.value = passband(f) * 10 ** (pathDb(path, Date.now()) / 20);
     tone.connect(envelope).connect(level).connect(input);
     tone.start();
-    return { timeline: new StreamTimeline({ fixedDelay }), path, tone, envelope, level, f, ended: false };
+    return { timeline: new StreamTimeline({ fixedDelay }), path, tone, envelope, level, f, ended: false, heardAt: null, keyedMs: 0 };
   }
 
   function close(stream) {
@@ -65,6 +68,21 @@ export function createReceiver({ fixedDelay = null, pathTo = null } = {}) {
   }
 
   const keyed = (stream, watts) => dbToAmp(steadyDb(watts, stream.path));
+
+  /** How long the key was down between the previous tick and `until`, as heard. */
+  function keyedSince(stream, until) {
+    const from = stream.heardAt ?? until;
+    let on = stream.timeline.current.on, at = from, ms = 0;
+    for (const x of stream.timeline.queued) {
+      if (x.at > until) break;
+      if (x.at > at) {
+        if (on) ms += x.at - at;
+        at = x.at;
+      }
+      on = x.on;
+    }
+    return on ? ms + until - at : ms;
+  }
 
   return {
     /** A key packet for stream `id`, received at performance.now() `arrival`. */
@@ -102,13 +120,23 @@ export function createReceiver({ fixedDelay = null, pathTo = null } = {}) {
       for (const [id, stream] of streams) {
         apply(stream, stream.timeline.watchdog(now));
         const { f } = stream.timeline.at(now);
-        const fade = fadeDb(stream.path, wall);
-        stream.tone.frequency.setTargetAtTime(toneHz(f), t, .004);
-        stream.level.gain.setTargetAtTime(filterGain(f - tuneOffset()) * 10 ** (fade / 20), t, .004);
+        const fade = pathDb(stream.path, wall);
+        stream.tone.frequency.setTargetAtTime(toneHz(f), t, .012);
+        stream.level.gain.setTargetAtTime(passband(f) * 10 ** (fade / 20), t, LEVEL_TC);
+        const keyedMs = keyedSince(stream, heardAt);
         const current = stream.timeline.sample(heardAt);
         const db = steadyDb(current.p, stream.path) + fade;
-        if (current.on) signals.push({ offset: current.f, amp: dbToAmp(db), db });
-        if (current.on || stream.timeline.queued.length || heardAt - current.at < ACTIVE_FOR_MS) active.push({ offset: current.f, db });
+        const span = heardAt - (stream.heardAt ?? heardAt);
+        stream.heardAt = heardAt;
+        // `duty` is the part of the last tick the key was down, so short elements still mark the waterfall
+        const duty = span > 0 ? keyedMs / span : current.on;
+        if (duty > 0) signals.push({ offset: current.f, amp: dbToAmp(db), db, duty, on: current.on });
+        if (current.on || stream.timeline.queued.length || heardAt - current.at < ACTIVE_FOR_MS) {
+          stream.keyedMs += keyedMs;
+          active.push({ offset: current.f, db, keyedMs: stream.keyedMs });
+        } else {
+          stream.keyedMs = 0;
+        }
 
         const forgotten = now - stream.timeline.lastArrival > FORGET_AFTER_MS;
         if ((stream.ended || forgotten) && stream.timeline.idleAt(now - 200)) {

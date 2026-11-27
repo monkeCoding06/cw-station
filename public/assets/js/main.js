@@ -97,6 +97,14 @@ function startPresence(onPing, tunedOffset) {
 function setMoreOpen(open) {
   document.querySelector('.settings').classList.toggle('more-open', open);
   $('moreToggle').setAttribute('aria-expanded', String(open));
+  fitMore();
+}
+
+/** The More menu opens upwards; keep it below the top of the screen and let it scroll inside. */
+function fitMore() {
+  const settings = document.querySelector('.settings');
+  const more = settings.querySelector('.more');
+  more.style.maxHeight = settings.classList.contains('more-open') ? Math.max(120, settings.getBoundingClientRect().top - 12) + 'px' : '';
 }
 
 function setLogOpen(open) {
@@ -205,6 +213,13 @@ async function startApp(callsign) {
   };
   $('chatToggle').onclick = () => setChatOpen(!document.body.classList.contains('chat-open'));
   $('chatClose').onclick = () => setChatOpen(false);
+  $('moreClose').onclick = () => setMoreOpen(false);
+  $('refClose').onclick = () => { $('refClose').closest('details').open = false; };
+  (window.visualViewport ?? window).addEventListener('resize', fitMore);
+  document.addEventListener('click', event => {
+    const settings = document.querySelector('.settings');
+    if (settings.classList.contains('more-open') && !settings.contains(event.target)) setMoreOpen(false);
+  });
   $('chatBox').addEventListener('keydown', event => { if (event.key === 'Escape') setChatOpen(false); });
 
   function switchRoom(name) {

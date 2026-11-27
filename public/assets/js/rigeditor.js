@@ -40,7 +40,7 @@ function preview() {
 
 function build() {
   editor.replaceChildren(
-    h('div', { class: 'sheet-head' }, h('strong', {}, 'Customize rig')),
+    h('div', { class: 'sheet-head' }, h('strong', {}, 'Customize rig'), h('button', { type: 'button', class: 'x-close', 'aria-label': 'Close', onclick: cancel }, '×')),
     h('div', { class: 'row presets' }, Object.entries(PRESETS).map(([name, preset]) =>
       h('button', { type: 'button', onclick: () => { Object.assign(draft, preset); sync(); } }, name))),
     ...Object.entries(CHOICES).map(([key, values]) => h('fieldset', {},

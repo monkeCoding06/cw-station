@@ -1,26 +1,35 @@
 import { $ } from './util.js';
 import { audioContext, enableAudio, masterOutput } from './audio.js';
-import { isKeyDown } from './keyer.js';
+import { isKeyDown, takeKeyedMs } from './keyer.js';
 import * as waterfall from './waterfall.js';
 import { BAND_MAX, BAND_MIN, ROWS, SPAN_HZ, VIEW_BINS } from './waterfall.js';
 import { clearSpectrum, drawSpectrum, initSpectrum, setTraceColor } from './spectrum.js';
-import { displayLevel } from './signal.js';
+import { bandNoiseDb, birdieFor, dbToAmp, LEVEL, localNoiseDb, noiseRms, powerDb, READABLE_SNR, snrDb } from './signal.js';
 
 /*
  * The receiver rig shared by every room: tuning dial, waterfall, power,
  * RF gain, IF bandwidth, and the audio chain (noise -> IF filter -> speaker).
  *
  * Rooms send their signals into receiverInput() and report what is on the
- * air each tick via update(), so the waterfall and the filter agree.
- * The waterfall records the whole band; the screen shows a window of it.
+ * air each tick via update(). Audio, waterfall, spectrum, meter and scan all
+ * work from the same levels: signals in dB, noise from signal.js, passband
+ * from filterGain(). The waterfall records the whole band; the screen shows a window of it.
+ *
+ * In General the band also has life of its own: noise that drifts, the odd
+ * static crash, and a weak carrier from next door. None of it is a station.
  */
 
 const BAND_START_HZ = 7030000;  // offsets everywhere are Hz from 7.030 MHz
 const FILTER_ORDER = 4;         // steepness of the receive filter's skirts
+const IMAGE_REJECTION = .03;    // the opposite sideband comes through 30 dB down
+const NOISE_AMPLITUDE = .3366;  // white noise that reads noiseRms() after the IF filter
+const IF_Q = .6436;             // two equal bandpass sections with Q = IF_Q * pitch / bw are bw wide at -3 dB
+const MIN_KEYED_MS = 60;        // scan ignores anything keyed for less than this
 
 let canvas, ctx, picture, pixels;
 let powered = false;
-let bus, noiseFilter, ifFilter;
+let bus, noiseFilter, ifFilter, noiseLevel, crashLevel, birdieTone, birdieLevel;
+let band = null;                // General's own band life: { noiseDb, birdie, crash, nextCrashAt }
 
 /** Other modules can watch the receiver: power(on), active(signals) every tick, reset() on a room change. */
 export const listeners = { power: null, active: null, reset: null };
@@ -32,7 +41,7 @@ export const tunedKHz = () => offsetKHz(tuneOffset());
 export const isPowered = () => powered;
 
 let rxLevel = 0;
-/** Simulated receive level, 0..1: band noise plus the keyed signals that get through the filter. */
+/** S-meter reading, 0..1: power in the passband, band noise plus whatever gets through the filter. */
 export const receiveLevel = () => rxLevel;
 
 /** Left edge of the waterfall, as an offset. It follows the VFO but never leaves the band. */
@@ -46,6 +55,9 @@ export function filterGain(distanceHz) {
   const halfBandwidth = parseInt($('bw').value) / 2;
   return 1 / Math.sqrt(1 + (distanceHz / halfBandwidth) ** (2 * FILTER_ORDER));
 }
+
+/** filterGain() plus the sideband: a station so far below the dial that it beats below zero is the image. */
+export const passband = offsetHz => filterGain(offsetHz - tuneOffset()) * (+$('pitch').value + offsetHz - tuneOffset() < 0 ? IMAGE_REJECTION : 1);
 
 /** The audio node that received signals connect to. Created on first use. */
 export function receiverInput() {
@@ -61,16 +73,74 @@ export function receiverInput() {
 
   const noiseBuffer = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate);
   const samples = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * .38;
+  for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * NOISE_AMPLITUDE;
   const noiseSource = audio.createBufferSource();
   noiseSource.buffer = noiseBuffer;
   noiseSource.loop = true;
   noiseFilter = audio.createBiquadFilter();
   noiseFilter.type = 'bandpass';
-  // only the noise goes through the IF filter; signals are shaped by filterGain() as they are tuned
-  noiseSource.connect(noiseFilter).connect(ifFilter).connect(bus);
+  noiseLevel = audio.createGain();
+  // only the noise goes through the IF filter; signals are shaped by passband() as they are tuned
+  noiseSource.connect(noiseLevel).connect(noiseFilter).connect(ifFilter).connect(bus);
   noiseSource.start();
+
+  // static crashes: the same noise, from elsewhere in the buffer, through the same filter
+  const crashSource = audio.createBufferSource();
+  crashSource.buffer = noiseBuffer;
+  crashSource.loop = true;
+  crashLevel = audio.createGain();
+  crashLevel.gain.value = 0;
+  crashSource.connect(crashLevel).connect(noiseFilter);
+  crashSource.start(0, .9);
+
+  birdieTone = audio.createOscillator();
+  birdieLevel = audio.createGain();
+  birdieLevel.gain.value = 0;
+  birdieTone.connect(birdieLevel).connect(bus);
+  birdieTone.start();
   return bus;
+}
+
+/** Turns General's band life on for receiver `call`, or off (null) for the quiet rooms. */
+export function setBandActivity(call) {
+  band = call ? { localDb: localNoiseDb(call), birdie: birdieFor(call), crash: null, nextCrashAt: 0 } : null;
+  if (crashLevel) crashLevel.gain.cancelScheduledValues(0);
+  if (crashLevel) crashLevel.gain.value = 0;
+}
+
+const noiseDbNow = () => (band ? bandNoiseDb(Date.now()) + band.localDb : 0);
+
+/** A crash is a quick burst of wideband noise that dies away; returns its power over the noise right now. */
+function crashPower(now) {
+  if (!band) return 0;
+  if (now >= band.nextCrashAt) {
+    if (band.nextCrashAt) startCrash(now);
+    band.nextCrashAt = now + 3000 + Math.random() * 12000;
+  }
+  const crash = band.crash;
+  if (!crash || now < crash.at) return 0;
+  return crash.peak * Math.exp(-(now - crash.at) / crash.decayMs);
+}
+
+function startCrash(now) {
+  const peakDb = 3 + Math.random() * 8;
+  const decayMs = 60 + Math.random() * 220;
+  band.crash = { at: now, peak: 10 ** (peakDb / 10), decayMs };
+  if (!crashLevel || !powered) return;
+  const gain = crashLevel.gain, t = audioContext().currentTime + .01;
+  gain.cancelScheduledValues(t);
+  gain.setValueAtTime(0, t);
+  // a crackle of two or three bursts, each a bit weaker
+  const tau = decayMs / 2000;
+  const bursts = 2 + (Math.random() < .5);
+  for (let i = 0, at = t, amp = 10 ** (peakDb / 20); i < bursts; i++) {
+    gain.linearRampToValueAtTime(amp, at + .002);
+    gain.setTargetAtTime(0, at + .002, tau);
+    const gap = .02 + Math.random() * .06;
+    if (i < bursts - 1) gain.setValueAtTime(amp * Math.exp(-(gap - .002) / tau), at + gap);
+    at += gap;
+    amp *= .4 + Math.random() * .3;
+  }
 }
 
 export function setPower(on) {
@@ -95,7 +165,7 @@ export function silence() {
 /** A new room is a new band: forget what was recorded. */
 export function resetBand() {
   waterfall.clear();
-  if (powered) draw();
+  requestDraw();
   if (listeners.reset) listeners.reset();
 }
 
@@ -128,19 +198,31 @@ function updateTuning() {
   ticks.forEach((name, i) => {
     document.querySelector('.scale .' + name).textContent = ((BAND_START_HZ + start + i * SPAN_HZ / 4) / 1000).toFixed(2);
   });
-  if (powered) draw();
+  requestDraw();
 }
 
-/** Marks the receive passband on one pane. */
+/** Marks the receive passband on one pane: a tinted band between two bright edges. */
 function shade(c, target) {
   const perHz = target.width / SPAN_HZ;
   const bandwidth = parseInt($('bw').value);
-  const left = (tuneOffset() - bandwidth / 2 - windowStart()) * perHz;
-  c.fillStyle = 'rgba(255, 255, 255, .07)';
-  c.fillRect(left, 0, bandwidth * perHz, target.height);
-  c.fillStyle = 'rgba(255, 255, 255, .22)';
-  c.fillRect(left, 0, 1, target.height);
-  c.fillRect(left + bandwidth * perHz - 1, 0, 1, target.height);
+  const left = Math.round((tuneOffset() - bandwidth / 2 - windowStart()) * perHz);
+  const width = Math.round(bandwidth * perHz);
+  c.fillStyle = 'rgba(255, 255, 255, .09)';
+  c.fillRect(left, 0, width, target.height);
+  c.fillStyle = 'rgba(255, 236, 170, .55)';
+  c.fillRect(left - 1, 0, 2, target.height);
+  c.fillRect(left + width - 1, 0, 2, target.height);
+}
+
+// Drawing waits for the next frame, so a slow phone drops frames rather than delaying keying and audio.
+let drawQueued = false;
+function requestDraw() {
+  if (drawQueued || !powered || !ctx) return;
+  drawQueued = true;
+  requestAnimationFrame(() => {
+    drawQueued = false;
+    if (powered) draw();
+  });
 }
 
 /** Shows the part of the recorded band that is under the dial, in both panes, with the receive passband marked. */
@@ -155,47 +237,67 @@ function draw() {
 document.addEventListener('cw-display', event => {
   waterfall.setPalette(event.detail);
   setTraceColor(event.detail.trace);
-  if (powered && ctx) draw();
+  requestDraw();
 });
 
 /**
- * Call every few milliseconds. `signals` is [{ offset, amp, db? }]: what is keyed right now;
- * live stations give their received level in dB as well.
- * `active` is [{ offset, db? }]: every station in the middle of a transmission, keyed or not.
+ * Call every few milliseconds. `signals` is [{ offset, amp, db?, duty? }]: what was keyed since
+ * the last call; live stations give their received level in dB as well.
+ * `active` is [{ offset, db?, keyedMs? }]: every station in the middle of a transmission, keyed or not.
  */
+let lastUpdateAt = null;
+
 export function update(signals, active = []) {
-  const rfGain = 10 ** (+$('rf').value / 20);
+  const rfDb = +$('rf').value;
+  const rfGain = 10 ** (rfDb / 20);
+  const bandwidth = parseInt($('bw').value);
+  const now = performance.now();
+  const noiseDb = noiseDbNow();
+  const crash = crashPower(now);
+  // our own keying draws a trace at the TX frequency; muting is audio and meter only
+  const keyed = takeKeyedMs(now);
+  const tickMs = lastUpdateAt !== null && now - lastUpdateAt < 250 ? Math.max(1, now - lastUpdateAt) : 25;
+  lastUpdateAt = now;
+  const heard = band ? [...signals, { offset: band.birdie.offset + 3 * Math.sin(now / 41000), db: band.birdie.db }] : signals;
 
   if (bus) {
     const t = audioContext().currentTime;
     const pitch = +$('pitch').value;
-    const bandwidth = parseInt($('bw').value);
     bus.gain.setTargetAtTime(powered && !isKeyDown() ? Math.min(300, rfGain) : 0, t, .004);
-    noiseFilter.frequency.value = pitch;
-    noiseFilter.Q.value = .8;
-    ifFilter.frequency.setTargetAtTime(pitch, t, .012);
-    ifFilter.Q.setTargetAtTime(pitch / bandwidth, t, .012);
+    noiseLevel.gain.setTargetAtTime(10 ** (noiseDb / 20), t, .05);
+    for (const filter of [noiseFilter, ifFilter]) {
+      filter.frequency.setTargetAtTime(pitch, t, .012);
+      filter.Q.setTargetAtTime(IF_Q * pitch / bandwidth, t, .012);
+    }
+    const birdie = band && heard[heard.length - 1];
+    if (birdie) birdieTone.frequency.setTargetAtTime(Math.max(20, Math.abs(pitch + birdie.offset - tuneOffset())), t, .012);
+    birdieLevel.gain.setTargetAtTime(birdie ? dbToAmp(birdie.db) * passband(birdie.offset) : 0, t, .03);
   }
 
   if (!powered) {
     rxLevel = 0;
     return;
   }
-  const gain = Math.sqrt(rfGain);
-  // live stations carry their level in dB and read on a dB scale, like a real S-meter
-  const heard = signals.reduce((sum, s) => {
-    const through = filterGain(s.offset - tuneOffset());
-    return sum + (s.db === undefined ? s.amp * through : displayLevel(s.db + 20 * Math.log10(through)));
+  // S-meter: everything in the passband, on a dB scale like a real one
+  const noisePower = (noiseRms(bandwidth, noiseDb) / LEVEL) ** 2 * 2 * (1 + crash);
+  const signalPower = heard.reduce((sum, s) => {
+    const amp = (s.db === undefined ? s.amp / LEVEL : 10 ** (s.db / 20)) * passband(s.offset);
+    return sum + amp * amp * (s.duty ?? 1);
   }, 0);
-  rxLevel = isKeyDown() ? 0 : Math.min(1, .05 * gain + .5 * heard * gain);
-  waterfall.record(signals, {
+  const meterDb = 10 * Math.log10(noisePower + signalPower) + Math.min(20, rfDb) / 2;
+  rxLevel = isKeyDown() ? 0 : Math.min(1, Math.max(0, (meterDb + 32) / 40));
+
+  waterfall.record(heard, {
     rfGain,
-    listening: !isKeyDown(),
-    ownOffset: isKeyDown() ? tuneOffset() : null,
-    now: performance.now(),
+    own: keyed > 0 ? { offset: tuneOffset(), db: powerDb(parseFloat($('pwr').value)), duty: Math.min(1, keyed / tickMs) } : null,
+    now,
+    noiseDb: noiseDb + 10 * Math.log10(1 + crash),
   });
-  draw();
-  if (listeners.active) listeners.active(active);
+  requestDraw();
+  // scan hears a station as it would sound centred in this passband, on this band, now
+  if (listeners.active) {
+    listeners.active(active.filter(s => (s.db === undefined || snrDb(s.db, bandwidth, noiseDb) >= READABLE_SNR) && (s.keyedMs ?? Infinity) >= MIN_KEYED_MS));
+  }
 }
 
 export function initRig() {
@@ -231,7 +333,7 @@ export function initRig() {
   $('pwr').dispatchEvent(new Event('change'));
   $('bw').addEventListener('change', () => {
     $('bwOut').value = $('bw').value;
-    if (powered) draw();
+    requestDraw();
   });
   $('vol').dispatchEvent(new Event('input'));
   $('bw').dispatchEvent(new Event('change'));
